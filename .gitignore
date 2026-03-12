@@ -1,0 +1,10 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+bot_logs.txt
+bot_err.txt
+available_models.txt
+reproduce_output*.txt
+legal_db/
+laws_pdf/

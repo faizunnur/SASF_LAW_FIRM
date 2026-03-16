@@ -9,7 +9,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Manually copy ONLY the necessary scripts (This ignores the 8GB folder entirely)
+# Manually copy only code files
 COPY main.py .
 COPY rag_system.py .
 COPY templates.py .

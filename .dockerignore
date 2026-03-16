@@ -1,6 +1,11 @@
+# Ignore EVERYTHING
 *
+
+# EXCEPT these files
 !main.py
 !rag_system.py
 !templates.py
 !index_laws.py
 !requirements.txt
+!Dockerfile
+!Procfile

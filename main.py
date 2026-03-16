@@ -36,18 +36,13 @@ CRITICAL FORMATTING RULES:
 - DO NOT use markdown headers like `#`, `##`, or `###`. Telegram cannot parse them correctly.
 - Provide your response using the following structured sections and emojis. **IMPORTANT: You must TRANSLATE the section titles (like "Relevant Law Section", "Action Plan") into the requested language.**
 
-⚖️ Relevant Law Section: (e.g., Section 420 for Fraud - mention specific law)
-💡 Easy Explanation: Simple, non-technical breakdown.
-✅ Action Plan: Step-by-step guidance.
-📄 Document Checklist: Documents the user should gather.
-
-SPECIAL INSTRUCTIONS:
-1. Plan B (Criminal Cases): If 'Criminal', include a "🛡️ Plan B" section explaining FIR refusal alternatives (SP Office, C.R. Case). (Translate title if needed)
-2. Zimmanama (Theft/Recovery): If theft, include a "📦 Zimmanama (Property Recovery)" section explaining Section 516A CrPC. (Translate title if needed)
-3. Language: Respond entirely in the requested language (English or Bangla), including all section headers. If not specified, default to English.
-
-Maintain a professional and unbiased tone. Always include this exactly at the very end (translate to Bangla if responding in Bangla):
-"⚠️ Disclaimer: I am an AI assistant, not a human lawyer. This information is for educational purposes."
+⚖️ Relevant Law: (Section & Law Name)
+💡 Explanation: (1-2 sentences)
+✅ Action: (Brief steps)
+📄 Docs: (List)
+🛡️ Plan B: (FIR refusal guide - for Criminal)
+📦 Zimmanama: (Recovery guide - for Theft)
+Respond in the requested language. End with: "⚠️ AI Disclaimer: For educational purposes only."
 """
 
 # Initialize model with system instruction
@@ -63,10 +58,10 @@ rag = LegalRAG()
 ASK_NAME_OLD, ASK_LOCATION_OLD, ASK_OFFENSE_DETAILS_OLD = range(3)
 
 # Conversation states for deadline tracker
-ASK_DEADLINE_TYPE, ASK_DEADLINE_DATE = range(3, 5)
+ASK_DEADLINE_DESCRIPTION, ASK_DEADLINE_DATE = range(3, 5)
 
-# Conversation states for signature verification
-ASK_VERIFICATION_COURT, ASK_VERIFICATION_CASE, ASK_VERIFICATION_PARTIES = range(5, 8)
+# Conversation states for case analysis
+ASK_CASE_DESCRIPTION = 6
 
 # Conversation states for professional GD generation
 (
@@ -91,22 +86,43 @@ def get_emergency_keyboard():
     keyboard = [[InlineKeyboardButton("📞 Call 999 (Emergency)", callback_data='emergency_num')]]
     return InlineKeyboardMarkup(keyboard)
 
+def get_main_menu(lang='English'):
+    """Generate professional persistent menu with optimized grid."""
+    if lang == 'Bangla':
+        keyboard = [
+            ["🚀 নতুন করে শুরু করুন", "🔍 স্মার্ট কেস বিশ্লেষণ"],
+            ["📄 প্রফেশনাল জিডি (GD)", "📅 ডেডলাইন ট্র্যাকার"],
+            ["🌐 ভাষা পরিবর্তন", "❓ সাহায্য"],
+            ["🧹 ইতিহাস মুছুন"]
+        ]
+    else:
+        keyboard = [
+            ["🚀 Start New", "🔍 Smart Case Analysis"],
+            ["📄 Professional GD", "📅 Deadline Tracker"],
+            ["🌐 Change Language", "❓ Help & Features"],
+            ["🧹 Clear History"]
+        ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, is_persistent=True)
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
+    user_id = user.id
+    lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
     welcome_msg = (
         f"Greetings {user.first_name}! I am <b>Self Lawyer Bangladesh</b>, your 24/7 Digital Legal Assistant.\n\n"
         "I can help you analyze legal issues, find relevant laws in Bangladesh, and provide step-by-step roadmaps.\n\n"
-        "<b>Available Commands:</b>\n"
-        "/start - Start the conversation\n"
-        "/help - Get help and features overview\n"
-        "/generate_gd - Create a professional General Diary (GD)\n"
-        "/deadline - Calculate legal deadlines\n"
-        "/language - Switch between English and Bangla\n"
-        "/clear - Clear your conversation history for privacy\n\n"
-        "How can I assist you today? (You can type in English or Bangla)"
+        "Please use the menu below to explore my features or simply describe your legal issue to get started."
     )
-    await update.message.reply_text(welcome_msg, parse_mode="HTML")
+    if lang == 'Bangla':
+        welcome_msg = (
+            f"শুভেচ্ছা {user.first_name}! আমি <b>সেলফ লয়ার বাংলাদেশ</b>, আপনার ২৪/৭ ডিজিটাল আইনি সহকারী।\n\n"
+            "আমি আপনাকে আইনি সমস্যা বিশ্লেষণ করতে, বাংলাদেশের প্রাসঙ্গিক আইন খুঁজে পেতে এবং ধাপে ধাপে দিকনির্দেশনা দিতে সাহায্য করতে পারি।\n\n"
+            "আমার ফিচারগুলো দেখতে নিচের মেনু ব্যবহার করুন অথবা আপনার আইনি সমস্যাটি লিখুন।"
+        )
+    
+    await update.message.reply_text(welcome_msg, parse_mode="HTML", reply_markup=get_main_menu(lang))
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
@@ -120,22 +136,23 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "6. <b>Emergency:</b> Use the persistent button or call 999.\n"
         "7. <b>Language:</b> Use /language to switch between English and Bangla.\n"
         "8. <b>Professional GD:</b> Use /generate_gd to create a formal GD application.\n"
-        "9. <b>Deadline Tracker:</b> Use /deadline to calculate legal deadlines.\n"
-        "10. <b>Generate Verification:</b> Use /generate_verification to create a handwriting verification application.\n\n"
+        "9. <b>Deadline Tracker:</b> Use /deadline to calculate legal deadlines.\n\n"
         "<b>Privacy:</b> Use /clear to delete your session history."
     )
     await update.message.reply_text(help_text, parse_mode="HTML")
 
+async def start_new(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Reset session state and show welcome message."""
+    user_id = update.effective_user.id
+    user_history.pop(user_id, None)
+    context.user_data.clear()
+    await start(update, context)
+
 async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Clear the user's conversation history."""
     user_id = update.effective_user.id
-    
-    # Safely remove user from both tracking dictionaries
     user_history.pop(user_id, None)
     user_prefs.pop(user_id, None)
-
-    # Always confirm deletion to the user to avoid confusion, 
-    # even if the dictionaries were already empty (e.g. after a bot restart)
     await update.message.reply_text("Your conversation history and session preferences have been cleared. Your privacy is our priority. You are now starting fresh!")
 
 async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -161,9 +178,11 @@ async def language_button(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if query.data == 'lang_en':
         user_prefs[user_id]['lang'] = 'English'
         await query.edit_message_text(text="Language set to English.")
+        await query.message.reply_text("Main menu updated.", reply_markup=get_main_menu('English'))
     else:
         user_prefs[user_id]['lang'] = 'Bangla'
         await query.edit_message_text(text="ভাষা বাংলা হিসেবে সেট করা হয়েছে।")
+        await query.message.reply_text("প্রধান মেনু আপডেট করা হয়েছে।", reply_markup=get_main_menu('Bangla'))
 
 async def emergency_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle emergency button click."""
@@ -366,154 +385,135 @@ async def start_drafting(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("'/draft_document' has been updated to '/generate_gd'. Starting it for you now...")
     return await start_gd(update, context) # Re-using start_gd logic
 
-async def start_verification(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Start the signature verification drafting."""
-    user_id = update.effective_user.id
-    lang = user_prefs.get(user_id, {}).get('lang', 'English')
-    
-    if lang == 'Bangla':
-        await update.message.reply_text("আসুন এভিডেন্স অ্যাক্টের ৭৩ ধারার অধীনে সাক্ষর যাচাই করার জন্য একটি আবেদন ড্রাফট করি। মাননীয় আদালতের নাম কি?")
-    else:
-        await update.message.reply_text("Let's draft an Application for Signature Verification under Section 73 of the Evidence Act. What is the Honorable Court Name?")
-    return ASK_VERIFICATION_COURT
 
-async def receive_verification_court(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Receive court name and ask for case number."""
+async def start_case_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Start the formal case analysis flow."""
     user_id = update.effective_user.id
     lang = user_prefs.get(user_id, {}).get('lang', 'English')
-    
-    context.user_data['verif_court'] = update.message.text
+    msg = "Please describe your incident in detail. I will analyze the relevant laws and provide a step-by-step strategic roadmap for you."
     if lang == 'Bangla':
-        await update.message.reply_text("বুঝতে পেরেছি। মামলা নম্বরটি কত?")
-    else:
-        await update.message.reply_text("Got it. What is the Case Number?")
-    return ASK_VERIFICATION_CASE
+        msg = "অনুগ্রহ করে আপনার ঘটনাটি বিস্তারিত বর্ণনা করুন। আমি প্রাসঙ্গিক আইনগুলো বিশ্লেষণ করব এবং আপনার জন্য একটি ধাপে ধাপে কৌশলগত নির্দেশিকা প্রদান করব।"
+    await update.message.reply_text(msg, reply_markup=ReplyKeyboardRemove())
+    return ASK_CASE_DESCRIPTION
 
-async def receive_verification_case(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Receive case number and ask for parties' names."""
-    user_id = update.effective_user.id
-    lang = user_prefs.get(user_id, {}).get('lang', 'English')
-    
-    context.user_data['verif_case'] = update.message.text
-    if lang == 'Bangla':
-        await update.message.reply_text("অনুগ্রহ করে পক্ষসমূহের নাম দিন (যেমন, রহিম -বনাম- করিম)।")
-    else:
-        await update.message.reply_text("Please provide the Parties' Names (e.g., John Doe -vs- Jane Doe).")
-    return ASK_VERIFICATION_PARTIES
-
-async def receive_verification_parties(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Receive parties' names, generate the document, and send it."""
-    user_id = update.effective_user.id
-    lang = user_prefs.get(user_id, {}).get('lang', 'English')
-    
-    context.user_data['verif_parties'] = update.message.text
-    
-    if lang == 'Bangla':
-        await update.message.reply_text("ধন্যবাদ। আপনার আবেদন তৈরি করা হচ্ছে...")
-    else:
-        await update.message.reply_text("Thank you. Generating your application...")
-    
-    import templates
-    app_text = templates.SIGNATURE_VERIFICATION_TEMPLATE.format(
-        court_name=context.user_data.get('verif_court', 'Unknown Court'),
-        case_number=context.user_data.get('verif_case', 'Unknown Case Number'),
-        parties_names=context.user_data.get('verif_parties', 'Unknown Parties')
-    )
-    
-    if lang == 'Bangla':
-        await update.message.reply_text(f"এখানে আপনার ফরম্যাট করা আবেদন দেওয়া হলো:\n\n```\n{app_text}\n```", parse_mode="Markdown")
-    else:
-        await update.message.reply_text(f"Here is your formatted application:\n\n```\n{app_text}\n```", parse_mode="Markdown")
-    
-    context.user_data.pop('verif_court', None)
-    context.user_data.pop('verif_case', None)
-    context.user_data.pop('verif_parties', None)
-    return ConversationHandler.END
-
-async def cancel_verification(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Cancel the signature verification drafting."""
-    user_id = update.effective_user.id
-    lang = user_prefs.get(user_id, {}).get('lang', 'English')
-    
-    if lang == 'Bangla':
-        await update.message.reply_text("সাক্ষর যাচাইয়ের আবেদন তৈরি বাতিল করা হয়েছে।")
-    else:
-        await update.message.reply_text("Signature verification drafting cancelled.")
-    context.user_data.pop('verif_court', None)
-    context.user_data.pop('verif_case', None)
-    context.user_data.pop('verif_parties', None)
+async def receive_case_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Pass incident description to the main analysis logic."""
+    # We simply call handle_message to reuse the complex Gemini logic
+    await handle_message(update, context)
     return ConversationHandler.END
 
 async def start_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Start the deadline tracker process."""
+    """Start the AI-driven deadline tracker process."""
     user_id = update.effective_user.id
     lang = user_prefs.get(user_id, {}).get('lang', 'English')
     
-    keyboard = [
-        ["1. Cheque Dishonour (Notice)"],
-        ["2. Cheque Dishonour (File Case)"],
-        ["3. Defamation Suit"],
-        ["4. Civil Suit (Money/Contract)"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
-    
     if lang == 'Bangla':
-        await update.message.reply_text("আপনি কোন ধরনের আইনি ব্যবস্থার সময়সীমা ট্র্যাক করছেন? একটি বিকল্প নির্বাচন করুন:", reply_markup=reply_markup)
+        await update.message.reply_text("আসুন আপনার আইনি সময়সীমা (Deadline) নির্ধারণ করি। সংক্ষেপে আপনার ঘটনাটি বর্ণনা করুন (যেমন: 'আমার মালিক বেতন দেয়নি' বা 'আমি মামলা হারার পর আপিল করতে চাই')।", reply_markup=ReplyKeyboardRemove())
     else:
-        await update.message.reply_text("What type of legal action are you tracking? Please select an option:", reply_markup=reply_markup)
-    return ASK_DEADLINE_TYPE
+        await update.message.reply_text("Let's determine your legal deadline. Please briefly describe your incident (e.g., 'My employer hasn't paid me' or 'I want to appeal after losing a case').", reply_markup=ReplyKeyboardRemove())
+    return ASK_DEADLINE_DESCRIPTION
 
-async def receive_deadline_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Receive the deadline type."""
+async def receive_deadline_description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Receive the incident description."""
     user_id = update.effective_user.id
     lang = user_prefs.get(user_id, {}).get('lang', 'English')
     
-    context.user_data['deadline_type'] = update.message.text
-    # Remove the reply keyboard
+    context.user_data['deadline_description'] = update.message.text
+    
     if lang == 'Bangla':
-        await update.message.reply_text("চমৎকার। ঘটনা বা কারণ ঘটার তারিখটি কবে ছিল (যেমন, চেকটি কবে ডিজঅনার হয়েছিল বা চুক্তি ভঙ্গ হয়েছিল)?\n\nঅনুগ্রহ করে তারিখটি YYYY-MM-DD বা '10 March 2024' ফরম্যাটে দিন।", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("চমৎকার। ঘটনা বা কারণ ঘটার তারিখটি কবে ছিল? (যেমন, ১০ মার্চ ২০২৪ বা DD/MM/YYYY ফরম্যাটে দিন)")
     else:
-        await update.message.reply_text("Great. What was the date of the incident or cause of action (e.g., when the cheque bounced or the contract was breached)?\n\nPlease enter the date in YYYY-MM-DD or '10 March 2024' format.", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("Great. What was the date of the incident or cause of action? (e.g., 10 March 2024 or DD/MM/YYYY format)")
     return ASK_DEADLINE_DATE
 
 async def receive_deadline_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Calculate the deadline and respond."""
+    """Classify with AI, calculate the deadline using RAG context, and respond in minimalist format."""
     date_str = update.message.text
-    case_type = context.user_data.get('deadline_type', '')
+    incident_description = context.user_data.get('deadline_description', '')
+    lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
     
     try:
-        incident_date = parser.parse(date_str)
+        incident_date = parser.parse(date_str, dayfirst=True)
+    except:
+        await update.message.reply_text("Invalid date format. Use DD/MM/YYYY.")
+        return ASK_DEADLINE_DATE
+
+    # RAG Retrieval
+    rag_query = f"Limitation period and time for filing for: {incident_description}"
+    search_results = rag.query_laws(rag_query, n_results=3)
+    rag_context = "\n\n".join(search_results['documents'][0])
+
+    # Minimalist AI Prompt
+    classification_prompt = f"""
+    Context: {rag_context}
+    Incident: {incident_description}
+    Date: {incident_date.strftime('%d/%m/%Y')}
+    
+    Task: Identify legal category, section, and limitation period according to Bangladesh Law.
+    Return EXACTLY this structure (no other text):
+    Category: [Law/Section Name]
+    Period: [Number] [days/months/years]
+    Rule: [Strictly 1-sentence rule explaining the deadline]
+    """
+    
+    try:
+        response = model.generate_content(classification_prompt)
+        ai_output = response.text.strip()
         
-        reply_msg = f"<b>Incident Date:</b> {incident_date.strftime('%B %d, %Y')}\n"
-        reply_msg += f"<b>Category:</b> {case_type}\n\n"
+        # Parse AI output
+        lines = ai_output.split('\n')
+        category, rule = "Unknown", "Check Limitation Act 1908."
+        period_val, period_unit = 3, "years"
         
-        if "1" in case_type or "Notice" in case_type:
-            deadline = incident_date + timedelta(days=30)
-            reply_msg += f"⚠️ <b>Deadline:</b> {deadline.strftime('%B %d, %Y')}\n"
-            reply_msg += "Under the Negotiable Instruments Act 1881 (Sec 138), you must send a legal notice within <b>30 days</b> of receiving the slip that the cheque bounced."
-        
-        elif "2" in case_type or "File Case" in case_type:
-            reply_msg += "Under NI Act 1881 (Sec 138), after sending the legal notice, the sender gets 15 days to pay. If they don't, you must file the case within <b>30 days</b> immediately after that 15-day grace period expires."
-            
-        elif "3" in case_type or "Defamation" in case_type:
-            deadline = incident_date.replace(year=incident_date.year + 1)
-            reply_msg += f"⚠️ <b>Deadline:</b> {deadline.strftime('%B %d, %Y')}\n"
-            reply_msg += "Under the Limitation Act 1908, the limitation period for filing a suit for compensation for libel or slander is <b>1 year</b> from the date the publication or words spoken."
-        
-        elif "4" in case_type or "Civil Suit" in case_type:
-            deadline = incident_date.replace(year=incident_date.year + 3)
-            reply_msg += f"⚠️ <b>Deadline:</b> {deadline.strftime('%B %d, %Y')}\n"
-            reply_msg += "Under the Limitation Act 1908, a general civil suit for breach of contract or money recovery must typically be filed within <b>3 years</b> from the time the cause of action arises."
-        
+        for line in lines:
+            if "Category:" in line: category = line.split(":", 1)[1].strip()
+            if "Rule:" in line: rule = line.split(":", 1)[1].strip()
+            if "Period:" in line:
+                parts = line.split(":", 1)[1].strip().split()
+                if len(parts) >= 2:
+                    try:
+                        period_val = int(parts[0])
+                        period_unit = parts[1].lower()
+                    except: pass
+
+        # Calculate Deadline
+        from dateutil.relativedelta import relativedelta
+        if "year" in period_unit:
+            deadline = incident_date + relativedelta(years=period_val)
+        elif "month" in period_unit:
+            deadline = incident_date + relativedelta(months=period_val)
         else:
-            reply_msg += "I'm sorry, I don't have a specific deadline calculation for that case type yet. Please consult a legal professional."
-            
-        await update.message.reply_text(reply_msg, parse_mode="HTML")
+            deadline = incident_date + relativedelta(days=period_val)
+
+        # STRICT Minimalist Format
+        headers = {
+            'date': "Incident Date",
+            'cat': "Detected Category",
+            'dead': "⚠️ Deadline",
+            'rule': "Rule"
+        }
+        if lang == 'Bangla':
+            headers = {
+                'date': "ঘটনার তারিখ",
+                'cat': "শনাক্তকৃত বিভাগ",
+                'dead': "⚠️ আইনি সময়সীমা",
+                'rule': "নিয়ম"
+            }
+
+        reply_msg = (
+            f"<b>{headers['date']}:</b> {incident_date.strftime('%d/%m/%Y')}\n"
+            f"<b>{headers['cat']}:</b> {category}\n"
+            f"<b>{headers['dead']}:</b> {deadline.strftime('%d/%m/%Y')}\n"
+            f"<b>{headers['rule']}:</b> {rule}"
+        )
+
+        await update.message.reply_text(reply_msg, parse_mode="HTML", reply_markup=get_main_menu(lang))
         
     except Exception as e:
-        await update.message.reply_text("I couldn't understand that date format. Please try the command `/deadline` again with a clear format like `2024-03-10` or `10 March 2024`.")
-        
-    context.user_data.pop('deadline_type', None)
+        logger.error(f"Minimalist Deadline Error: {e}")
+        await update.message.reply_text("Error calculating deadline. Please consult a lawyer.")
+
+    context.user_data.pop('deadline_description', None)
     return ConversationHandler.END
 
 async def cancel_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -525,13 +525,30 @@ async def cancel_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await update.message.reply_text("ডেডলাইন ট্র্যাকিং বাতিল করা হয়েছে।", reply_markup=ReplyKeyboardRemove())
     else:
         await update.message.reply_text("Deadline tracking cancelled.", reply_markup=ReplyKeyboardRemove())
-    context.user_data.pop('deadline_type', None)
+    context.user_data.pop('deadline_description', None)
     return ConversationHandler.END
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle incoming messages and query Gemini with RAG context."""
+    """Handle incoming messages and query Gemini or route menu clicks."""
     user_id = update.effective_user.id
     user_text = update.message.text
+    lang = user_prefs.get(user_id, {}).get('lang', 'English')
+
+    # Route Menu Button Clicks (Fallback for non-conversational buttons)
+    menu_mapping = {
+        "🚀 Start New": start_new,
+        "🚀 নতুন করে শুরু করুন": start_new,
+        "🌐 Change Language": set_language,
+        "🌐 ভাষা পরিবর্তন": set_language,
+        "❓ Help & Features": help_command,
+        "❓ সাহায্য": help_command,
+        "🧹 Clear History": clear_history,
+        "🧹 ইতিহাস মুছুন": clear_history
+    }
+
+    if user_text in menu_mapping:
+        await menu_mapping[user_text](update, context)
+        return
 
     if user_id not in user_history:
         user_history[user_id] = []
@@ -567,10 +584,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Safeguards and Procedural Timeline logic
         lower_combined = (user_text + " " + bot_response).lower()
         if any(kw in lower_combined for kw in ["forgery", "fake signature", "fraud"]):
-            bot_response += "\n\n⚠️ *Legal Warning:* Under Section 193 of the Penal Code 1860, giving or fabricating false evidence in a judicial proceeding is a serious crime. If a signature you claim is fake is proven to be yours, you may face up to 7 years in prison and a fine."
-            
-        if any(kw in lower_combined for kw in ["cid", "forensics", "pbi"]):
-            bot_response += "\n\n⏳ *Expected Timeline:* Forensic handwriting analysis and lab reports in Bangladesh typically take 3 to 6 months due to laboratory backlogs."
+            bot_response += "\n\n⚠️ *Legal Warning:* Under Section 193 of the Penal Code 1860, fabricating false evidence is a crime punishable by up to 7 years in prison."
 
         # Send response with Markdown fallback and emergency button
         reply_markup = get_emergency_keyboard()
@@ -616,7 +630,8 @@ def main() -> None:
     gd_conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler('draft_document', start_drafting),
-            CommandHandler('generate_gd', start_gd)
+            CommandHandler('generate_gd', start_gd),
+            MessageHandler(filters.Regex(r'^(📄 Professional GD|📄 প্রফেশনাল জিডি \(GD\))$'), start_gd)
         ],
         states={
             ASK_GD_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_date)],
@@ -635,28 +650,33 @@ def main() -> None:
     )
     application.add_handler(gd_conv_handler)
     
-    # Verification Conversation Handler
-    verif_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('generate_verification', start_verification)],
-        states={
-            ASK_VERIFICATION_COURT: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_verification_court)],
-            ASK_VERIFICATION_CASE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_verification_case)],
-            ASK_VERIFICATION_PARTIES: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_verification_parties)]
-        },
-        fallbacks=[CommandHandler('cancel', cancel_verification)]
-    )
-    application.add_handler(verif_conv_handler)
-    
     # Deadline Tracker Conversation Handler
     deadline_conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('deadline', start_deadline)],
+        entry_points=[
+            CommandHandler('deadline', start_deadline),
+            MessageHandler(filters.Regex(r'^(📅 Deadline Tracker|📅 ডেডলাইন ট্র্যাকার)$'), start_deadline)
+        ],
         states={
-            ASK_DEADLINE_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_deadline_type)],
+            ASK_DEADLINE_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_deadline_description)],
             ASK_DEADLINE_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_deadline_date)]
         },
         fallbacks=[CommandHandler('cancel', cancel_deadline)]
     )
     application.add_handler(deadline_conv_handler)
+
+    application.add_handler(deadline_conv_handler)
+
+    # Smart Case Analysis Conversation Handler
+    case_conv_handler = ConversationHandler(
+        entry_points=[
+            MessageHandler(filters.Regex(r'^(🔍 Smart Case Analysis|🔍 স্মার্ট কেস বিশ্লেষণ)$'), start_case_analysis)
+        ],
+        states={
+            ASK_CASE_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_case_analysis)]
+        },
+        fallbacks=[CommandHandler('cancel', clear_history)] # Fallback to clear if cancelled
+    )
+    application.add_handler(case_conv_handler)
 
     # Messages
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

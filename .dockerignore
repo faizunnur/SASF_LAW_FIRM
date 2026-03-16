@@ -1,12 +1,6 @@
-# Block All Strategy
 *
-
-# Whitelist source files
 !main.py
 !rag_system.py
 !templates.py
+!index_laws.py
 !requirements.txt
-!Dockerfile
-
-# Whitelist potential directories (if needed in future, currently empty as per request)
-#!legal_db/

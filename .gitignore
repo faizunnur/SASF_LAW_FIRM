@@ -12,6 +12,12 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Bot logs
+bot_logs.txt
+bot_err.txt
+available_models.txt
+reproduce_output*.txt
+
 # Local database/data
 legal_db/
 laws_pdf/

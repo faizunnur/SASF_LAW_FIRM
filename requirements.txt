@@ -3,7 +3,6 @@ google-generativeai
 chromadb
 python-dotenv
 pypdf
-sentence-transformers
 flask
 python-docx
 fpdf

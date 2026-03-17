@@ -8,10 +8,12 @@ class LegalRAG:
         if db_path is None:
             db_path = os.getenv("CHROMA_DB_PATH", "./legal_db")
         self.client = chromadb.PersistentClient(path=db_path)
-        # Using default sentence-transformers model for embeddings
-        self.embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+        # Using Gemini API for embeddings to keep image size small
+        self.embedding_fn = embedding_functions.GoogleGenerativeAiEmbeddingFunction(
+            api_key=os.getenv("GEMINI_API_KEY")
+        )
         self.collection = self.client.get_or_create_collection(
-            name="bangladesh_laws",
+            name="bangladesh_laws_v2", # Versioning the collection since embeddings changed
             embedding_function=self.embedding_fn
         )
 

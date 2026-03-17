@@ -8,4 +8,4 @@
 !index_laws.py
 !requirements.txt
 !Dockerfile
-!Procfile
+!railway.toml

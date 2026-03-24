@@ -7,8 +7,11 @@ except ImportError:
 
 import os
 import logging
+import math
+import pathlib
+import tempfile
 from typing import List, Dict
-from telegram import Update, ForceReply, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import Update, ForceReply, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ConversationHandler
 import google.generativeai as genai
 from fpdf import FPDF
@@ -99,15 +102,15 @@ def get_main_menu(lang='English'):
         keyboard = [
             ["🚀 নতুন করে শুরু করুন", "🔍 স্মার্ট কেস বিশ্লেষণ"],
             ["📄 প্রফেশনাল জিডি (GD)", "📅 ডেডলাইন ট্র্যাকার"],
-            ["🌐 ভাষা পরিবর্তন", "❓ সাহায্য"],
-            ["🧹 ইতিহাস মুছুন"]
+            [KeyboardButton(text="📍 নিকটস্থ থানা (Police Station)", request_location=True), "📚 আপনার অধিকার জানুন"],
+            ["🌐 ভাষা পরিবর্তন", "❓ সাহায্য", "🧹 ইতিহাস মুছুন"]
         ]
     else:
         keyboard = [
             ["🚀 Start New", "🔍 Smart Case Analysis"],
             ["📄 Professional GD", "📅 Deadline Tracker"],
-            ["🌐 Change Language", "❓ Help & Features"],
-            ["🧹 Clear History"]
+            [KeyboardButton(text="📍 Nearest Police Station", request_location=True), "📚 Know Your Rights"],
+            ["🌐 Change Language", "❓ Help & Features", "🧹 Clear History"]
         ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, is_persistent=True)
 
@@ -138,13 +141,16 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "1. <b>AI Problem Analyzer:</b> Describe your issue, and I'll identify the legal category.\n"
         "2. <b>Auto-Law Finder:</b> Links issues to Penal Code, CrPC, Digital Security Act, etc.\n"
         "3. <b>Legal Roadmap:</b> Provides relevant sections, explanations, action plans, and document checklists.\n"
-        "4. <b>Plan B Logic:</b> Advice for FIR refusal (for Criminal cases).\n"
-        "5. <b>Zimmanama:</b> Recovery guidance (for Theft cases).\n"
-        "6. <b>Emergency:</b> Use the persistent button or call 999.\n"
-        "7. <b>Language:</b> Use /language to switch between English and Bangla.\n"
-        "8. <b>Professional GD:</b> Use /generate_gd to create a formal GD application.\n"
-        "9. <b>Deadline Tracker:</b> Use /deadline to calculate legal deadlines.\n\n"
-        "<b>Privacy:</b> Use /clear to delete your session history."
+        "4. <b>Voice Note Analysis:</b> Send a voice note, and I will transcribe and analyze it seamlessly.\n"
+        "5. <b>Nearest Police Station:</b> Share your location to instantly get contact details for the closest Thana.\n"
+        "6. <b>Know Your Rights:</b> A dedicated menu to easily explore your legal rights and roadmaps.\n"
+        "7. <b>Plan B Logic:</b> Advice for FIR refusal (for Criminal cases).\n"
+        "8. <b>Zimmanama:</b> Recovery guidance (for Theft cases).\n"
+        "9. <b>Emergency:</b> Use the persistent button or call 999.\n"
+        "10. <b>Language:</b> Use the menu to switch between English and Bangla.\n"
+        "11. <b>Professional GD:</b> Create a formal GD application in PDF format.\n"
+        "12. <b>Deadline Tracker:</b> Calculate legal deadlines and limitation periods.\n\n"
+        "<b>Privacy:</b> Use the Clear History button or /clear to delete your session history."
     )
     await update.message.reply_text(help_text, parse_mode="HTML")
 
@@ -196,6 +202,55 @@ async def emergency_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     query = update.callback_query
     await query.answer()
     await query.message.reply_text("🚨 <b>National Emergency Service: 999</b>\n\nPlease dial 999 from your phone's dialer to contact the Police, Fire Service, or Ambulance immediately.", parse_mode="HTML")
+
+# Dummy data for demonstration
+POLICE_STATIONS = [
+    {"name": "Ramna Model Thana", "lat": 23.7431, "lon": 90.4045, "phone": "+8802-223384210"},
+    {"name": "Dhanmondi Model Thana", "lat": 23.7460, "lon": 90.3755, "phone": "+8802-9669550"},
+    {"name": "Gulshan Thana", "lat": 23.7925, "lon": 90.4078, "phone": "+8802-222289989"},
+    {"name": "Banani Thana", "lat": 23.7940, "lon": 90.4000, "phone": "+8802-222272899"},
+    {"name": "Mirpur Model Thana", "lat": 23.8052, "lon": 90.3628, "phone": "+8802-48032733"},
+    {"name": "Tejgaon Thana", "lat": 23.7561, "lon": 90.3872, "phone": "+8802-48118001"},
+    {"name": "Uttara West Thana", "lat": 23.8690, "lon": 90.4000, "phone": "+8802-58957816"}
+]
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_location = update.message.location
+    lat1 = user_location.latitude
+    lon1 = user_location.longitude
+    user_id = update.effective_user.id
+    lang = user_prefs.get(user_id, {}).get('lang', 'English')
+
+    nearest_station = None
+    min_distance = float('inf')
+
+    for station in POLICE_STATIONS:
+        distance = calculate_distance(lat1, lon1, station["lat"], station["lon"])
+        if distance < min_distance:
+            min_distance = distance
+            nearest_station = station
+
+    if nearest_station:
+        distance_km = round(min_distance, 2)
+        if lang == 'Bangla':
+            msg = (f"📍 <b>নিকটস্থ থানা:</b> {nearest_station['name']}\n"
+                   f"📏 <b>দূরত্ব:</b> {distance_km} কিমি\n"
+                   f"📞 <b>যোগাযোগ:</b> {nearest_station['phone']}")
+        else:
+            msg = (f"📍 <b>Nearest Police Station:</b> {nearest_station['name']}\n"
+                   f"📏 <b>Distance:</b> {distance_km} km\n"
+                   f"📞 <b>Contact:</b> {nearest_station['phone']}")
+        await update.message.reply_text(msg, parse_mode="HTML", reply_markup=get_main_menu(lang))
+    else:
+        await update.message.reply_text("Could not find a nearby police station.")
 
 async def start_gd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Start the professional GD drafting process."""
@@ -535,27 +590,101 @@ async def cancel_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     context.user_data.pop('deadline_description', None)
     return ConversationHandler.END
 
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.effective_user.id
+    lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+    msg = "🎙️ Processing your voice note (this might take a few seconds)..." if lang == 'English' else "🎙️ আপনার অডিও বার্তাটি প্রসেস করা হচ্ছে (কয়েক সেকেন্ড সময় লাগতে পারে)..."
+    status_msg = await update.message.reply_text(msg)
+    
+    try:
+        voice = update.message.voice
+        file = await context.bot.get_file(voice.file_id)
+        
+        temp_dir = tempfile.gettempdir()
+        temp_audio_path = os.path.join(temp_dir, f"voice_{user_id}_{voice.file_unique_id}.ogg")
+        await file.download_to_drive(temp_audio_path)
+        
+        uploaded_audio = genai.upload_file(path=temp_audio_path)
+        
+        prompt = "Transcribe the following audio exactly as spoken. If it is in Bangla, return Bangla text. Only return the transcription, nothing else."
+        transcription_response = model.generate_content([prompt, uploaded_audio])
+        transcript_text = transcription_response.text.strip()
+        
+        genai.delete_file(uploaded_audio.name)
+        os.remove(temp_audio_path)
+        
+        if not transcript_text:
+            raise ValueError("Empty transcription")
+            
+        await status_msg.edit_text(f"📝 <b>Transcription:</b>\n{transcript_text}", parse_mode="HTML")
+        
+        context.user_data['voice_text'] = transcript_text
+        await handle_message(update, context)
+        
+    except Exception as e:
+        logger.error(f"Voice Analysis Error: {e}", exc_info=True)
+        error_msg = "Sorry, I couldn't process your voice note. Please try speaking clearly or type your message." if lang == 'English' else "দুঃখিত, আমি আপনার অডিও বার্তাটি বুঝতে পারিনি। দয়া করে পরিষ্কার করে কথা বলুন অথবা লিখে জানান।"
+        await status_msg.edit_text(error_msg)
+    finally:
+        context.user_data.pop('voice_text', None)
+
+async def show_rights_cards(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Prompt the user to describe what rights they want to know about."""
+    user_id = update.effective_user.id
+    lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+    if lang == 'Bangla':
+        msg = ("📚 **আপনার অধিকার জানুন**\n\n"
+               "আপনি কোন বিষয়টি সম্পর্কে আপনার আইনি অধিকার জানতে চান, তা নিচে লিখে পাঠান।\n"
+               "যেমন: 'বেসরকারি চাকরি থেকে বিনা নোটিশে বহিস্কার' অথবা 'পারিবারিক সম্পত্তি বন্টন'।\n\n"
+               "আমি আপনাকে বাংলাদেশের আইন অনুযায়ী বিস্তারিত একটি রূপরেখা প্রদান করব।")
+    else:
+        msg = ("📚 **Know Your Rights**\n\n"
+               "Please type the legal topic or situation you want to know your rights about.\n"
+               "Example: 'Fired from private job without notice' or 'Cyberbullying on Facebook'.\n\n"
+               "I will provide a detailed legal roadmap according to Bangladesh law.")
+        
+    if update.message:
+        await update.message.reply_text(msg, parse_mode="Markdown")
+    else:
+        await update.callback_query.message.reply_text(msg, parse_mode="Markdown")
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle incoming messages and query Gemini or route menu clicks."""
     user_id = update.effective_user.id
-    user_text = update.message.text
+    
+    is_callback = update.callback_query is not None
+    if is_callback:
+        user_text = context.user_data.get('quick_card_text')
+        reply_func = update.callback_query.message.reply_text
+    else:
+        user_text = context.user_data.get('voice_text') or (update.message.text if update.message else None)
+        reply_func = update.message.reply_text if update.message else None
+
+    if not user_text:
+        return
+        
     lang = user_prefs.get(user_id, {}).get('lang', 'English')
 
     # Route Menu Button Clicks (Fallback for non-conversational buttons)
-    menu_mapping = {
-        "🚀 Start New": start_new,
-        "🚀 নতুন করে শুরু করুন": start_new,
-        "🌐 Change Language": set_language,
-        "🌐 ভাষা পরিবর্তন": set_language,
-        "❓ Help & Features": help_command,
-        "❓ সাহায্য": help_command,
-        "🧹 Clear History": clear_history,
-        "🧹 ইতিহাস মুছুন": clear_history
-    }
+    if not is_callback:
+        menu_mapping = {
+            "🚀 Start New": start_new,
+            "🚀 নতুন করে শুরু করুন": start_new,
+            "🌐 Change Language": set_language,
+            "🌐 ভাষা পরিবর্তন": set_language,
+            "❓ Help & Features": help_command,
+            "❓ সাহায্য": help_command,
+            "🧹 Clear History": clear_history,
+            "🧹 ইতিহাস মুছুন": clear_history,
+            "📚 Know Your Rights": show_rights_cards,
+            "📚 আপনার অধিকার জানুন": show_rights_cards
+        }
 
-    if user_text in menu_mapping:
-        await menu_mapping[user_text](update, context)
-        return
+        if user_text in menu_mapping:
+            await menu_mapping[user_text](update, context)
+            return
 
     if user_id not in user_history:
         user_history[user_id] = []
@@ -596,25 +725,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Send response with Markdown fallback and emergency button
         reply_markup = get_emergency_keyboard()
         try:
-            await update.message.reply_text(bot_response, parse_mode="Markdown", reply_markup=reply_markup)
+            if reply_func: await reply_func(bot_response, parse_mode="Markdown", reply_markup=reply_markup)
         except Exception as telegram_err:
             logger.warning(f"Markdown parsing failed, sending as plain text: {telegram_err}")
-            await update.message.reply_text(bot_response, reply_markup=reply_markup)
+            if reply_func: await reply_func(bot_response, reply_markup=reply_markup)
             
     except genai.types.generation_types.StopCandidateException as e:
         logger.error(f"Safety filters triggered: {e}")
-        await update.message.reply_text("I'm sorry, I cannot provide an answer to that specific query due to safety filters. Please try rephrasing your question.")
+        if reply_func: await reply_func("I'm sorry, I cannot provide an answer to that specific query due to safety filters. Please try rephrasing your question.")
 
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Error handling message: {e}", exc_info=True)
         
-        if "429" in error_msg or "quota" in error_msg.lower():
-            await update.message.reply_text("I'm experiencing high traffic right now and reached my temporary limit. Please try sending your message again in about a minute.")
-        elif "500" in error_msg or "503" in error_msg:
-            await update.message.reply_text("The legal brain is a bit busy right now. Please try again in a moment.")
-        else:
-            await update.message.reply_text("Sorry, I encountered an error processing your request. Please check the logs or try again.")
+        if reply_func:
+            if "429" in error_msg or "quota" in error_msg.lower():
+                await reply_func("I'm experiencing high traffic right now and reached my temporary limit. Please try sending your message again in about a minute.")
+            elif "500" in error_msg or "503" in error_msg:
+                await reply_func("The legal brain is a bit busy right now. Please try again in a moment.")
+            else:
+                await reply_func("Sorry, I encountered an error processing your request. Please check the logs or try again.")
 
 def main() -> None:
     """Start the bot."""
@@ -687,6 +817,8 @@ def main() -> None:
 
     # Messages
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.VOICE, handle_voice))
+    application.add_handler(MessageHandler(filters.LOCATION, handle_location))
 
     # Run the bot
     application.run_polling()

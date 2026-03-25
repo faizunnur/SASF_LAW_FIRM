@@ -10,6 +10,8 @@ import logging
 import math
 import pathlib
 import tempfile
+import requests
+import json
 from typing import List, Dict
 from telegram import Update, ForceReply, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ConversationHandler
@@ -203,54 +205,124 @@ async def emergency_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.answer()
     await query.message.reply_text("🚨 <b>National Emergency Service: 999</b>\n\nPlease dial 999 from your phone's dialer to contact the Police, Fire Service, or Ambulance immediately.", parse_mode="HTML")
 
-# Dummy data for demonstration
-POLICE_STATIONS = [
-    {"name": "Ramna Model Thana", "lat": 23.7431, "lon": 90.4045, "phone": "+8802-223384210"},
-    {"name": "Dhanmondi Model Thana", "lat": 23.7460, "lon": 90.3755, "phone": "+8802-9669550"},
-    {"name": "Gulshan Thana", "lat": 23.7925, "lon": 90.4078, "phone": "+8802-222289989"},
-    {"name": "Banani Thana", "lat": 23.7940, "lon": 90.4000, "phone": "+8802-222272899"},
-    {"name": "Mirpur Model Thana", "lat": 23.8052, "lon": 90.3628, "phone": "+8802-48032733"},
-    {"name": "Tejgaon Thana", "lat": 23.7561, "lon": 90.3872, "phone": "+8802-48118001"},
-    {"name": "Uttara West Thana", "lat": 23.8690, "lon": 90.4000, "phone": "+8802-58957816"}
-]
+def get_nearest_police_station_osm(lat, lon, radius=5000):
+    """Query OpenStreetMap Overpass API for the nearest police station."""
+    overpass_url = "https://overpass-api.de/api/interpreter"
+    overpass_query = f"""
+    [out:json][timeout:25];
+    (
+      node["amenity"="police"](around:{radius},{lat},{lon});
+      way["amenity"="police"](around:{radius},{lat},{lon});
+      relation["amenity"="police"](around:{radius},{lat},{lon});
+    );
+    out center;
+    """
+    headers = {
+        'User-Agent': 'SelfLawyerBot/2.0 (Bangladesh Bot)',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+    }
+    try:
+        response = requests.post(overpass_url, data={'data': overpass_query}, headers=headers, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        logger.error(f"Error querying Overpass: {e}")
+        return None
+    
+    if not data.get('elements'):
+        return None
+        
+    def calc_dist(l1, ln1, l2, ln2):
+        R = 6371.0
+        dlat = math.radians(l2 - l1)
+        dlon = math.radians(ln2 - ln1)
+        a = math.sin(dlat / 2)**2 + math.cos(math.radians(l1)) * math.cos(math.radians(l2)) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+        
+    nearest = None
+    min_dist = float('inf')
+    
+    for element in data['elements']:
+        elat = element.get('lat', element.get('center', {}).get('lat'))
+        elon = element.get('lon', element.get('center', {}).get('lon'))
+        if elat and elon:
+            dist = calc_dist(lat, lon, elat, elon)
+            if dist < min_dist:
+                min_dist = dist
+                nearest = element
+                
+    if nearest:
+        name = nearest.get('tags', {}).get('name', 'Police Station (Name Unknown)')
+        name_en = nearest.get('tags', {}).get('name:en', name)
+        return {"name": name_en, "dist": min_dist}
+    return None
 
-def calculate_distance(lat1, lon1, lat2, lon2):
-    R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
+async def fetch_dynamic_phone(station_name):
+    """Use Gemini to quickly fetch the phone number of a police station."""
+    try:
+        from google.generativeai import GenerativeModel
+        local_model = GenerativeModel('gemini-1.5-flash')
+        prompt = f"What is the official phone number of {station_name} police station in Bangladesh? Provide ONLY the main phone number. Do not include any other text. If unknown, say 'Not found'."
+        response = local_model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        logger.error(f"Gemini Phone Fetch Error: {e}")
+        return "Not found"
 
 async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_location = update.message.location
-    lat1 = user_location.latitude
-    lon1 = user_location.longitude
+    lat = user_location.latitude
+    lon = user_location.longitude
     user_id = update.effective_user.id
     lang = user_prefs.get(user_id, {}).get('lang', 'English')
 
-    nearest_station = None
-    min_distance = float('inf')
-
-    for station in POLICE_STATIONS:
-        distance = calculate_distance(lat1, lon1, station["lat"], station["lon"])
-        if distance < min_distance:
-            min_distance = distance
-            nearest_station = station
-
-    if nearest_station:
-        distance_km = round(min_distance, 2)
+    # Basic coordinate validation for Bangladesh (roughly 20-27 Lat, 88-93 Lon)
+    if not (20 < lat < 27 and 88 < lon < 93):
+        msg = ("📍 Your location indicates you are outside Bangladesh or your GPS is inaccurate.\n\n"
+               "This service is fully dynamic for all areas within **Bangladesh borders**. Please check your GPS settings.")
         if lang == 'Bangla':
-            msg = (f"📍 <b>নিকটস্থ থানা:</b> {nearest_station['name']}\n"
+            msg = ("📍 আপনার লোকেশন দেখাচ্ছে আপনি বাংলাদেশের বাইরে আছেন অথবা জিপিএস সঠিক নয়।\n\n"
+                   "এই পরিষেবাটি **বাংলাদেশের** যেকোনো স্থানের জন্য প্রযোজ্য। আপনার জিপিএস ঠিক করুন।")
+        await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=get_main_menu(lang))
+        return
+
+    # Let user know we are searching dynamically
+    status_msg = await update.message.reply_text("🔍 Searching nationwide database..." if lang == 'English' else "🔍 দেশজুড়ে ডেটাবেস অনুসন্ধান করা হচ্ছে...")
+
+    # Query OSM
+    station_data = get_nearest_police_station_osm(lat, lon, radius=10000) # 10km radius
+    
+    if not station_data:
+        # Retry with larger radius for rural areas
+        await status_msg.edit_text("🔍 Expanding search radius (rural area)..." if lang == 'English' else "🔍 অনুসন্ধানের পরিধি বাড়ানো হচ্ছে (গ্রামীণ এলাকা)...")
+        station_data = get_nearest_police_station_osm(lat, lon, radius=25000) # 25km radius
+        
+    if station_data:
+        distance_km = round(station_data['dist'], 2)
+        station_name = station_data['name']
+        
+        # Get phone number dynamically from Gemini
+        await status_msg.edit_text(f"📞 Fetching contact for {station_name}..." if lang == 'English' else f"📞 {station_name}-এর যোগাযোগ তথ্য খোঁজা হচ্ছে...")
+        phone = await fetch_dynamic_phone(station_name)
+        
+        if lang == 'Bangla':
+            msg = (f"📍 <b>নিকটস্থ থানা:</b> {station_name}\n"
                    f"📏 <b>দূরত্ব:</b> {distance_km} কিমি\n"
-                   f"📞 <b>যোগাযোগ:</b> {nearest_station['phone']}")
+                   f"📞 <b>যোগাযোগ:</b> {phone}")
         else:
-            msg = (f"📍 <b>Nearest Police Station:</b> {nearest_station['name']}\n"
+            msg = (f"📍 <b>Nearest Police Station:</b> {station_name}\n"
                    f"📏 <b>Distance:</b> {distance_km} km\n"
-                   f"📞 <b>Contact:</b> {nearest_station['phone']}")
-        await update.message.reply_text(msg, parse_mode="HTML", reply_markup=get_main_menu(lang))
+                   f"📞 <b>Contact:</b> {phone}")
+        
+        # We delete the status message and send the final keyboard with emergency button
+        await status_msg.delete()
+        await update.message.reply_text(msg, parse_mode="HTML", reply_markup=get_emergency_keyboard())
     else:
-        await update.message.reply_text("Could not find a nearby police station.")
+        err_msg = "Could not find any police station nearby. Please ensure your GPS is accurate."
+        if lang == 'Bangla':
+            err_msg = "কাছাকাছি কোনো থানা পাওয়া যায়নি। অনুগ্রহ করে নিশ্চিত করুন আপনার জিপিএস সঠিক।"
+        await status_msg.edit_text(err_msg, reply_markup=get_main_menu(lang))
 
 async def start_gd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Start the professional GD drafting process."""

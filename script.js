@@ -25,7 +25,11 @@ const appState = {
   editingCaseId: null,
   editingAppointmentId: null,
   editingScheduleId: null,
-  editingDocumentId: null
+  editingDocumentId: null,
+  backendStatus: {
+    server: "Checking...",
+    database: "Waiting for server response..."
+  }
 };
 
 const elements = {
@@ -41,6 +45,7 @@ const elements = {
   logoutBtn: document.getElementById("logoutBtn"),
   loadDemoBtn: document.getElementById("loadDemoBtn"),
   statsGrid: document.getElementById("statsGrid"),
+  backendStatusBox: document.getElementById("backendStatusBox"),
   userBanner: document.getElementById("userBanner"),
   moduleList: document.getElementById("moduleList"),
   dashboardTitle: document.getElementById("dashboardTitle"),
@@ -146,6 +151,45 @@ function renderUserBanner() {
     return;
   }
   elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} • ${titleCase(user.role)} • ${user.department}</p></div><span class="role-badge">${titleCase(user.role)}</span>`;
+}
+
+function renderBackendStatus() {
+  elements.backendStatusBox.innerHTML = `
+    <h4>Backend Status</h4>
+    <p>${appState.backendStatus.server}</p>
+    <p>${appState.backendStatus.database}</p>
+  `;
+}
+
+async function fetchBackendStatus() {
+  try {
+    const healthResponse = await fetch("/api/health");
+
+    if (!healthResponse.ok) {
+      throw new Error("Node server is not responding.");
+    }
+
+    const health = await healthResponse.json();
+    appState.backendStatus.server = `Server: ${health.runtime} API is online at ${new Date(health.timestamp).toLocaleString()}.`;
+
+    try {
+      const dbResponse = await fetch("/api/db-check");
+      const dbData = await dbResponse.json();
+
+      if (!dbResponse.ok) {
+        throw new Error(dbData.error || "Neon connection failed.");
+      }
+
+      appState.backendStatus.database = `Database: connected to Neon database "${dbData.database}" (${dbData.schema}).`;
+    } catch (error) {
+      appState.backendStatus.database = `Database: ${error.message}`;
+    }
+  } catch (error) {
+    appState.backendStatus.server = `Server: ${error.message}`;
+    appState.backendStatus.database = "Database: waiting for the Node server.";
+  }
+
+  renderBackendStatus();
 }
 
 function renderModules() {
@@ -431,6 +475,7 @@ function renderReportBox(type) {
 
 function renderAll() {
   renderStats();
+  renderBackendStatus();
   renderUserBanner();
   renderModules();
   renderProfileForm();
@@ -752,3 +797,4 @@ function bindEvents() {
 loadData();
 bindEvents();
 renderAll();
+fetchBackendStatus();

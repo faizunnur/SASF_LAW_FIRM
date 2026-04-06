@@ -150,7 +150,7 @@ function renderUserBanner() {
     elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>No active user</h3><p>Login or create a new account to explore the role-based dashboard.</p></div><span class="role-badge">Guest</span>`;
     return;
   }
-  elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} • ${titleCase(user.role)} • ${user.department}</p></div><span class="role-badge">${titleCase(user.role)}</span>`;
+  elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} • ${titleCase(user.role)} • Occupation: ${user.department}</p></div><span class="role-badge">${titleCase(user.role)}</span>`;
 }
 
 function renderBackendStatus() {
@@ -226,7 +226,7 @@ function renderProfileForm() {
     <label><span>Full Name</span><input type="text" name="name" value="${user.name}" ${readOnly}></label>
     <label><span>Email</span><input type="email" name="email" value="${user.email}" ${readOnly}></label>
     <label><span>Phone</span><input type="text" name="phone" value="${user.phone}" ${readOnly}></label>
-    <label><span>Department</span><input type="text" name="department" value="${user.department}" ${readOnly}></label>
+    <label><span>Occupation</span><input type="text" name="department" value="${user.department}" ${readOnly}></label>
     ${user.role === "client" ? "" : '<button class="primary-btn" type="submit">Update Profile</button>'}
   `;
 }

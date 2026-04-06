@@ -503,6 +503,7 @@ function bindEvents() {
     const password = formData.get("password").trim();
     const user = appState.data.users.find((item) => item.email.toLowerCase() === email && item.password === password);
     if (!user) return showToast("Invalid email or password.");
+    if (user.role !== "client") return showToast("Only client accounts can log in right now.");
     appState.currentUserId = user.id;
     saveSession();
     renderAll();
@@ -519,7 +520,7 @@ function bindEvents() {
       name: formData.get("name").trim(),
       email,
       password: formData.get("password").trim(),
-      role: formData.get("role"),
+      role: "client",
       phone: formData.get("phone").trim(),
       department: formData.get("department").trim(),
       verified: false

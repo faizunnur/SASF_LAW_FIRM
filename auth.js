@@ -78,10 +78,17 @@ function wireLoginPage() {
     const formData = new FormData(form);
     const email = String(formData.get("email")).trim().toLowerCase();
     const password = String(formData.get("password")).trim();
-    const user = data.users.find((item) => item.email.toLowerCase() === email && item.password === password);
+    const user = data.users.find(
+      (item) => item.email.toLowerCase() === email && item.password === password
+    );
 
     if (!user) {
       showMessage(feedback, "Invalid email or password.", "error");
+      return;
+    }
+
+    if (user.role !== "client") {
+      showMessage(feedback, "Only client accounts can log in right now.", "error");
       return;
     }
 
@@ -118,7 +125,7 @@ function wireRegisterPage() {
       name: String(formData.get("name")).trim(),
       email,
       password: String(formData.get("password")).trim(),
-      role: String(formData.get("role")),
+      role: "client",
       phone: String(formData.get("phone")).trim(),
       department: String(formData.get("department")).trim(),
       verified: false

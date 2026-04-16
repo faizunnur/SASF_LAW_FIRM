@@ -16,7 +16,9 @@
             <p class="brand-name">SASF LAW FIRM</p>
           </div>
         </div>
-        <div class="topbar-actions"></div>
+        <div class="topbar-actions">
+          <button class="ghost-btn hidden" id="logoutBtn" type="button">Logout</button>
+        </div>
       </nav>
 
       <nav class="main-navbar">
@@ -128,6 +130,7 @@
           <div>
             <p class="section-kicker">Dashboard</p>
             <h2 id="dashboardTitle">Project dashboard</h2>
+            <div id="adminNav" class="admin-nav-bar hidden"></div>
           </div>
           <div class="search-row">
             <input id="globalSearchInput" type="search" placeholder="Search by case id, client, type, status...">
@@ -187,10 +190,24 @@
             <div class="card-list" id="notificationList"></div>
           </section>
 
-          <section class="dashboard-section" id="reportSection">
-            <div class="section-headline"><h3>User Role & Generate Report</h3></div>
-            <form id="reportForm" class="form-grid form-grid-two"></form>
-            <div class="report-box" id="reportBox"></div>
+          <section class="dashboard-section" id="userManagementSection">
+            <div class="section-headline"><h3>User Management & Role Control</h3></div>
+            <form id="userManagementForm" class="form-grid form-grid-two"></form>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User ID</th><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Status</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="userTableBody"></tbody>
+              </table>
+            </div>
+            <div class="report-box" id="reportOutputBox">
+              <h4>System Reports</h4>
+              <p id="reportOutputText">Generate system summaries and user activity reports.</p>
+              <button class="ghost-btn" id="generateReportBtn" type="button">Generate Quick Report</button>
+            </div>
           </section>
         </div>
       </section>

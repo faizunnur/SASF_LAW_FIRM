@@ -311,8 +311,26 @@ textarea {
   text-align: left;
 }
 
-.dashboard-section.hidden {
-  display: none;
+.hidden {
+  display: none !important;
+}
+
+.admin-nav-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+.admin-nav-bar button {
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 4px;
+}
+
+.admin-nav-bar button.active {
+  background-color: var(--primary);
+  color: #fff;
 }
 
 .table-wrap {

@@ -165,10 +165,51 @@
                 <tbody id="userTableBody"></tbody>
               </table>
             </div>
-            <div class="report-box" id="reportOutputBox">
-              <h4>System Reports</h4>
-              <p id="reportOutputText">Generate system summaries and user activity reports.</p>
-              <button class="ghost-btn" id="generateReportBtn" type="button">Generate Quick Report</button>
+          </section>
+
+          <section class="dashboard-section" id="reportSection">
+            <div class="section-headline">
+              <h3>Report Generation 📊</h3>
+            </div>
+            
+            <div class="report-controls-grid">
+              <div class="report-filter-wrapper">
+                <label><span>Select Report Range</span>
+                  <select id="reportRangeSelect">
+                    <option value="weekly">Weekly Report (Last 7 Days)</option>
+                    <option value="monthly" selected>Monthly Report (Last 30 Days)</option>
+                    <option value="yearly">Yearly Report (Current Year)</option>
+                  </select>
+                </label>
+              </div>
+              <div class="report-btn-group">
+                <button class="report-card-btn" id="genDetailsReportBtn">
+                  <span class="icon">📄</span>
+                  <div class="report-card-text">
+                    <strong>Details Report</strong>
+                    <span>Case & User Activities</span>
+                  </div>
+                </button>
+                <button class="report-card-btn" id="genTransReportBtn">
+                  <span class="icon">💰</span>
+                  <div class="report-card-text">
+                    <strong>Transaction Report</strong>
+                    <span>Financial Summaries</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="report-display-area hidden" id="reportOutputBox">
+              <div class="report-header">
+                <h4 id="reportTitle">Generated Report</h4>
+                <div class="report-header-actions">
+                   <button class="primary-btn-sm" type="button" onclick="window.print()">Download PDF 📥</button>
+                </div>
+              </div>
+              <div id="reportOutputText" class="report-content-box">
+                <!-- Dynamic content goes here -->
+              </div>
             </div>
           </section>
         </div>

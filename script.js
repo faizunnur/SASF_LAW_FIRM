@@ -76,7 +76,6 @@ function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   appState.data = saved ? JSON.parse(saved) : seedDemoData();
   
-  // Ensure the specific admin exists even if data was previously saved
   if (appState.data && appState.data.users) {
     const adminExists = appState.data.users.some(u => u.email === "asif@gmail.com");
     if (!adminExists) {
@@ -102,9 +101,7 @@ function loadData() {
 function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState.data)); }
 function saveSession() { appState.currentUserId ? localStorage.setItem(SESSION_KEY, appState.currentUserId) : localStorage.removeItem(SESSION_KEY); }
 function getCurrentUser() { return appState.data.users.find((user) => user.id === appState.currentUserId) || null; }
-function getUserName(id) { return appState.data.users.find((entry) => entry.id === id)?.name || "Unassigned"; }
 function titleCase(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
-function createId(prefix) { return `${prefix}-${Math.floor(Math.random() * 900 + 100)}`; }
 
 function showToast(message) {
   elements.toast.textContent = message;
@@ -129,131 +126,102 @@ function addNotification(userId, title, message) {
 }
 
 function renderStats() {
-  const stats = [
-    { label: "Total Users", value: appState.data.users.length },
-    { label: "Active Sessions", value: appState.currentUserId ? 1 : 0 }
-  ];
+  const stats = [ { label: "Total Users", value: appState.data.users.length }, { label: "Active Sessions", value: appState.currentUserId ? 1 : 0 } ];
   elements.statsGrid.innerHTML = stats.map((item) => `<article class="mini-card"><h3>${item.value}</h3><p>${item.label}</p></article>`).join("");
 }
 
 function renderUserBanner() {
   const user = getCurrentUser();
   if (!user) {
-    elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>No active user</h3><p>Login or create a new account to explore the role-based dashboard.</p></div><span class="role-badge">Guest</span>`;
+    elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>No active user</h3><p>Login or create a new account.</p></div><span class="role-badge">Guest</span>`;
     return;
   }
-  elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} • ${titleCase(user.role)} • Occupation: ${user.department}</p></div><span class="role-badge">${titleCase(user.role)}</span>`;
+  elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} • ${titleCase(user.role)} • ${user.department}</p></div><span class="role-badge">${titleCase(user.role)}</span>`;
 }
 
 function renderBackendStatus() {
-  elements.backendStatusBox.innerHTML = `
-    <h4>Backend Status</h4>
-    <p>${appState.backendStatus.server}</p>
-    <p>${appState.backendStatus.database}</p>
-  `;
+  elements.backendStatusBox.innerHTML = `<h4>Backend Status</h4><p>${appState.backendStatus.server}</p><p>${appState.backendStatus.database}</p>`;
 }
 
 async function fetchBackendStatus() {
   try {
-    const healthResponse = await fetch("/api/health");
-
-    if (!healthResponse.ok) {
-      throw new Error("Node server is not responding.");
+    const res = await fetch("/api/health");
+    if (res.ok) {
+      const data = await res.json();
+      appState.backendStatus.server = `Server: Online (${data.runtime})`;
+      const dbRes = await fetch("/api/db-check");
+      if (dbRes.ok) appState.backendStatus.database = "Database: Connected to Neon PG";
+      else appState.backendStatus.database = "Database: Connection failed";
     }
-
-    const health = await healthResponse.json();
-    appState.backendStatus.server = `Server: ${health.runtime} API is online at ${new Date(health.timestamp).toLocaleString()}.`;
-
-    try {
-      const dbResponse = await fetch("/api/db-check");
-      const dbData = await dbResponse.json();
-
-      if (!dbResponse.ok) {
-        throw new Error(dbData.error || "Neon connection failed.");
-      }
-
-      appState.backendStatus.database = `Database: connected to Neon database "${dbData.database}" (${dbData.schema}).`;
-    } catch (error) {
-      appState.backendStatus.database = `Database: ${error.message}`;
-    }
-  } catch (error) {
-    appState.backendStatus.server = `Server: ${error.message}`;
-    appState.backendStatus.database = "Database: waiting for the Node server.";
+  } catch (e) {
+    appState.backendStatus.server = "Server: Offline";
+    appState.backendStatus.database = "Database: N/A";
   }
-
   renderBackendStatus();
 }
 
 function renderModules() {
   const user = getCurrentUser();
-  const visibleModuleIds = roleModules[user?.role || "guest"];
-  
-  const buttonsHtml = modules
-    .filter((module) => visibleModuleIds.includes(module.id))
-    .map((module) => `<button data-module-target="${module.id}" type="button"><strong>${module.title}</strong><span>${module.text}</span></button>`)
-    .join("");
-
-  elements.moduleList.innerHTML = buttonsHtml;
-  
-  // Also populate the compact admin nav if user is admin
+  const visibleIds = roleModules[user?.role || "guest"];
+  elements.moduleList.innerHTML = modules.filter(m => visibleIds.includes(m.id)).map(m => `<button data-module-target="${m.id}" type="button"><strong>${m.title}</strong><span>${m.text}</span></button>`).join("");
   if (user?.role === "admin") {
-    elements.adminNav.innerHTML = modules
-      .filter((module) => visibleModuleIds.includes(module.id))
-      .map((module) => `<button data-module-target="${module.id}" type="button">${module.title}</button>`)
-      .join("");
+    elements.adminNav.innerHTML = modules.filter(m => visibleIds.includes(m.id)).map(m => `<button data-module-target="${m.id}" type="button">${m.title}</button>`).join("");
     elements.adminNav.classList.remove("hidden");
   } else {
     elements.adminNav.classList.add("hidden");
   }
-
-  // Default to User Management for Admin on first load/login if not set
-  if (!appState.activeModuleId) {
-    appState.activeModuleId = user?.role === "admin" ? "userManagementSection" : (visibleModuleIds[0] || "profileSection");
-  }
-  
-  // Ensure the stored module is actually visible to the user's current role
-  if (!visibleModuleIds.includes(appState.activeModuleId)) {
-    appState.activeModuleId = visibleModuleIds[0] || "profileSection";
-  }
-
+  if (!appState.activeModuleId) appState.activeModuleId = user?.role === "admin" ? "userManagementSection" : (visibleIds[0] || "profileSection");
+  if (!visibleIds.includes(appState.activeModuleId)) appState.activeModuleId = visibleIds[0] || "profileSection";
   setActiveModule(appState.activeModuleId);
 }
 
-function setActiveModule(moduleId) {
-  appState.activeModuleId = moduleId;
+function setActiveModule(id) {
+  appState.activeModuleId = id;
   const user = getCurrentUser();
-  // Update both sidebar and admin nav buttons
-  const allNavButtons = [...document.querySelectorAll(".module-list button"), ...document.querySelectorAll(".admin-nav-bar button")];
-  allNavButtons.forEach((button) => button.classList.toggle("active", button.dataset.moduleTarget === moduleId));
-  
-  const visibleModuleIds = roleModules[user?.role || "guest"];
-  modules.forEach((module) => {
-    const section = document.getElementById(module.id);
-    if (section) {
-      const isVisible = visibleModuleIds.includes(module.id) && module.id === moduleId;
-      section.classList.toggle("hidden", !isVisible);
-    }
+  const visibleIds = roleModules[user?.role || "guest"];
+  document.querySelectorAll("[data-module-target]").forEach(b => b.classList.toggle("active", b.dataset.moduleTarget === id));
+  modules.forEach(m => {
+    const sec = document.getElementById(m.id);
+    if (sec) sec.classList.toggle("hidden", !(visibleIds.includes(m.id) && m.id === id));
   });
 }
 
 function renderProfileForm() {
   const user = getCurrentUser();
   if (!user) {
-    elements.profileForm.innerHTML = `<div class="empty-state">Login to view profile information.</div>`;
-    elements.deleteProfileBtn.disabled = true;
+    elements.profileForm.innerHTML = `<div class="empty-state">Login to view profile.</div>`;
     return;
   }
 
-  const readOnly = user.role === "client" ? "readonly" : "";
-  elements.deleteProfileBtn.disabled = user.role === "client";
+  const initials = user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  const ro = user.role === "client" ? "readonly" : "";
+  
   elements.profileForm.innerHTML = `
-    <label><span>Full Name</span><input type="text" name="name" value="${user.name}" ${readOnly}></label>
-    <label><span>Email</span><input type="email" name="email" value="${user.email}" ${readOnly}></label>
-    <label><span>Phone</span><input type="text" name="phone" value="${user.phone}" ${readOnly}></label>
-    <label><span>Occupation</span><input type="text" name="department" value="${user.department}" ${readOnly}></label>
-    ${user.role === "client" ? "" : '<button class="primary-btn" type="submit">Update Profile</button>'}
+    <div class="profile-redesign-container">
+      <div class="profile-summary-side">
+        <div class="profile-avatar-large">${initials}</div>
+        <h3>${user.name}</h3>
+        <span class="role-badge" data-role="${user.role}">${titleCase(user.role)}</span>
+        <p class="profile-email-sub">${user.email}</p>
+        <div class="profile-meta-badges">
+          <div class="meta-badge">Status: <span>Active</span></div>
+          <div class="meta-badge">Verified: <span>${user.verified ? "Yes" : "No"}</span></div>
+        </div>
+      </div>
+      <div class="profile-details-side">
+        <div class="form-grid">
+          <label><span>Full Name</span><input type="text" name="name" value="${user.name}" ${ro}></label>
+          <label><span>Email Address</span><input type="email" name="email" value="${user.email}" ${ro}></label>
+          <label><span>Phone Number</span><input type="text" name="phone" value="${user.phone}" ${ro}></label>
+          <label><span>Official Occupation</span><input type="text" name="department" value="${user.department}" ${ro}></label>
+        </div>
+        <div class="profile-actions-row">
+          ${user.role === "client" ? "" : '<button class="primary-btn prof-btn-update" type="submit">Save Changes</button>'}
+          <button class="table-btn danger-action prof-btn-delete" id="deleteProfileBtn" type="button">Delete Account 🗑️</button>
+        </div>
+      </div>
+    </div>
   `;
-  elements.deleteProfileBtn.innerHTML = "Delete Profile 🗑️";
 }
 
 function renderNotifications() {
@@ -262,331 +230,196 @@ function renderNotifications() {
     elements.notificationList.innerHTML = `<div class="empty-state">Notifications appear after login.</div>`;
     return;
   }
-  const items = user.role === "admin" ? appState.data.notifications : appState.data.notifications.filter((item) => item.userId === user.id);
-  elements.notificationList.innerHTML = items.length ? items.map((item) => `
+  const items = user.role === "admin" ? appState.data.notifications : appState.data.notifications.filter(n => n.userId === user.id);
+  elements.notificationList.innerHTML = items.length ? items.map(n => `
     <article class="entry-card notification-card">
       <div class="notif-grid">
-        <div class="notif-check">
-          <input type="checkbox" class="notif-checkbox" data-notif-id="${item.id}">
-        </div>
-        <div class="notif-content">
-          <h4>${item.title}</h4>
-          <p>${item.message}</p>
-          <div class="meta">${item.date}</div>
-        </div>
-        <div class="notif-actions">
-          <button class="table-btn danger-action" data-delete-notif="${item.id}" type="button" title="Delete Notification">🗑️</button>
-        </div>
+        <div class="notif-check"><input type="checkbox" class="notif-checkbox" data-notif-id="${n.id}"></div>
+        <div class="notif-content"><h4>${n.title}</h4><p>${n.message}</p><div class="meta">${n.date}</div></div>
+        <div class="notif-actions"><button class="table-btn danger-action" data-delete-notif="${n.id}" type="button">🗑️</button></div>
       </div>
-    </article>
-  `).join("") : `<div class="empty-state">No notifications available.</div>`;
+    </article>`).join("") : `<div class="empty-state">No notifications.</div>`;
 }
 
 function renderUserManagementForm() {
   const user = getCurrentUser();
-  if (!user || user.role !== "admin") {
-    elements.userManagementForm.innerHTML = `<div class="empty-state">Only administrators can manage system users.</div>`;
-    return;
-  }
-
-  const selectableUsers = appState.data.users.filter((item) => item.role !== "admin");
+  if (!user || user.role !== "admin") return;
+  const selectables = appState.data.users.filter(u => u.role !== "admin");
   elements.userManagementForm.innerHTML = `
     <div class="form-grid-two">
       <div class="form-grid">
-        <label><span>1. Search User</span><input type="text" id="userSearchInput" placeholder="Name or email..."></label>
-        <label><span>2. Select User</span><select name="userId" id="userSelect" required>${selectableUsers.map((item) => `<option value="${item.id}" data-search="${item.name.toLowerCase()} ${item.email.toLowerCase()}">${item.name} (${titleCase(item.role)})</option>`).join("")}</select></label>
+        <label><span>Find and Select User</span>
+          <div class="combobox-wrapper">
+            <input type="text" id="userComboboxInput" placeholder="Name or email..." class="combobox-input" autocomplete="off">
+            <input type="hidden" name="userId" id="selectedUserId">
+            <div id="comboboxResults" class="combobox-results hidden">
+              ${selectables.map(u => `<div class="combobox-item" data-id="${u.id}" data-search="${u.name.toLowerCase()} ${u.email.toLowerCase()}"><strong>${u.name}</strong> • ${titleCase(u.role)}</div>`).join("")}
+            </div>
+          </div>
+        </label>
       </div>
       <div class="form-grid">
-        <label><span>3. Assign/Update Role</span><select name="role" required>${["client", "lawyer", "assistant"].map((item) => `<option value="${item}">${titleCase(item)}</option>`).join("")}</select></label>
-        <div style="display: flex; align-items: flex-end; height: 100%;">
-          <button class="primary-btn full-width" type="submit" style="width: 100%;">Confirm Role Change</button>
-        </div>
+        <label><span>Assign/Update Role</span>
+          <select name="role" required>
+            <option value="">Select new role...</option>
+            <option value="client">Client</option>
+            <option value="lawyer">Lawyer</option>
+            <option value="assistant">Assistant</option>
+          </select>
+        </label>
+        <button class="primary-btn full-width" type="submit">Confirm Role Change</button>
       </div>
-    </div>
-  `;
-  
-  // Handled inside bindEvents for search logic
+    </div>`;
 }
 
 function renderUserTable() {
   const user = getCurrentUser();
-  if (!user || user.role !== "admin") {
-    elements.userTableBody.innerHTML = `<tr><td colspan="7"><div class="empty-state">Login as admin to view user registry.</div></td></tr>`;
-    return;
-  }
-
-  elements.userTableBody.innerHTML = appState.data.users.map((item) => `
+  if (!user || user.role !== "admin") return;
+  elements.userTableBody.innerHTML = appState.data.users.map(u => `
     <tr>
-      <td>${item.id}</td>
-      <td>${item.name}</td>
-      <td>${item.email}</td>
-      <td><span class="role-badge" data-role="${item.role}">${titleCase(item.role)}</span></td>
-      <td>${item.phone}</td>
-      <td><span class="status-tag" data-status="${item.status || "active"}">${titleCase(item.status || "active")}</span></td>
-      <td>
-        ${item.role !== "admin" ? `
-          <button class="table-btn ${item.status === "blocked" ? "success-action" : "danger-action"}" data-toggle-status="${item.id}" type="button">${item.status === "blocked" ? "Enable" : "Disable"}</button>
-        ` : "<em>System Owner</em>"}
-      </td>
-    </tr>
-  `).join("");
-}
-
-function generateReport() {
-  const totalUsers = appState.data.users.length;
-  const activeUsers = appState.data.users.filter(u => u.status !== "blocked").length;
-  const summary = `System Overview: ${totalUsers} total users registered (${activeUsers} active).`;
-  elements.reportOutputText.textContent = summary;
-  showToast("System overview report generated.");
+      <td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td><span class="role-badge" data-role="${u.role}">${titleCase(u.role)}</span></td><td>${u.phone}</td>
+      <td><span class="status-tag" data-status="${u.status || "active"}">${titleCase(u.status || "active")}</span></td>
+      <td>${u.role !== "admin" ? `<button class="table-btn ${u.status === "blocked" ? "success-action" : "danger-action"}" data-toggle-status="${u.id}">${u.status === "blocked" ? "Enable" : "Disable"}</button>` : "Owner"}</td>
+    </tr>`).join("");
 }
 
 function renderAll() {
-  renderStats();
-  renderBackendStatus();
-  renderUserBanner();
-  renderModules();
-  renderProfileForm();
-  renderNotifications();
-  renderUserManagementForm();
-  renderUserTable();
+  renderStats(); renderBackendStatus(); renderUserBanner(); renderModules(); renderProfileForm(); renderNotifications(); renderUserManagementForm(); renderUserTable();
   const user = getCurrentUser();
-
   const isAdmin = user && user.role === "admin";
-  
-  // Transform UI into a clean Portal view for Admin
   document.getElementById("authSection").classList.toggle("hidden", isAdmin);
   document.getElementById("summarySection").classList.toggle("hidden", isAdmin);
   document.getElementById("moduleSection").classList.toggle("hidden", isAdmin);
-  
-  // Hide landing hero and main navbar for Admin
   document.querySelector(".main-navbar").classList.toggle("hidden", isAdmin);
   document.querySelector(".hero-grid").classList.toggle("hidden", isAdmin);
-  
-  // Show Logout only when logged in
-  if (elements.logoutBtn) {
-    elements.logoutBtn.classList.toggle("hidden", !user);
-  }
-
-  elements.dashboardTitle.textContent = user ? `${titleCase(user.role)} dashboard and project modules` : "All project features in one interface";
+  if (elements.logoutBtn) elements.logoutBtn.classList.toggle("hidden", !user);
+  elements.dashboardTitle.textContent = user ? `${titleCase(user.role)} Dashboard` : "Law Firm Portal";
 }
 
 function bindEvents() {
-  elements.authTabs.forEach((button) => button.addEventListener("click", () => switchAuthTab(button.dataset.authTab)));
-
-  elements.loginForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const email = formData.get("email").trim().toLowerCase();
-    const password = formData.get("password").trim();
-    const user = appState.data.users.find((item) => item.email.toLowerCase() === email && item.password === password);
-    if (!user) return showToast("Invalid email or password.");
-    if (user.status === "blocked") return showToast("Your account has been deactivated by the administrator.");
-    // Removed restriction to allow Admin login
-    // if (user.role !== "client") return showToast("Only client accounts can log in right now.");
-    appState.currentUserId = user.id;
-    saveSession();
-    renderAll();
-    showToast(`Welcome back, ${user.name}.`);
+  elements.authTabs.forEach(b => b.addEventListener("click", () => switchAuthTab(b.dataset.authTab)));
+  elements.loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const u = appState.data.users.find(i => i.email.toLowerCase() === fd.get("email").trim().toLowerCase() && i.password === fd.get("password").trim());
+    if (!u) return showToast("Invalid credentials.");
+    if (u.status === "blocked") return showToast("Account restricted.");
+    appState.currentUserId = u.id; saveSession(); renderAll(); showToast(`Welcome, ${u.name}.`);
   });
 
-  elements.registerForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const email = formData.get("email").trim().toLowerCase();
-    if (appState.data.users.some((item) => item.email.toLowerCase() === email)) return showToast("This email is already registered.");
-    const user = {
-      id: `u-${Date.now()}`,
-      name: formData.get("name").trim(),
-      email,
-      password: formData.get("password").trim(),
-      role: "client",
-      phone: formData.get("phone").trim(),
-      department: formData.get("department").trim(),
-      verified: false,
-      status: "active"
-    };
-    appState.data.users.push(user);
-    addNotification("u-admin", "Profile Verifying Notification", `${user.name} registered and needs profile verification.`);
-    saveData();
-    switchAuthTab("login");
-    event.currentTarget.reset();
-    renderAll();
-    showToast("Registration complete. Please login.");
-  });
-
-  elements.recoverForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const email = new FormData(event.currentTarget).get("email").trim().toLowerCase();
-    const user = appState.data.users.find((item) => item.email.toLowerCase() === email);
-    if (!user) return showToast("No account found for this email.");
-    event.currentTarget.reset();
-    showToast(`Recovery notice sent to ${user.email}.`);
+  elements.registerForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const email = fd.get("email").trim().toLowerCase();
+    if (appState.data.users.some(i => i.email.toLowerCase() === email)) return showToast("Email exists.");
+    const u = { id: `u-${Date.now()}`, name: fd.get("name"), email, password: fd.get("password"), role: "client", phone: fd.get("phone"), department: fd.get("department"), verified: false, status: "active" };
+    appState.data.users.push(u); addNotification("u-admin", "New Registration", `${u.name} joined.`);
+    saveData(); switchAuthTab("login"); e.currentTarget.reset(); renderAll(); showToast("Registered. Please login.");
   });
 
   if (elements.logoutBtn) {
     elements.logoutBtn.addEventListener("click", () => {
-      appState.currentUserId = null;
-      saveSession();
-      renderAll();
-      showToast("Logged out successfully.");
+      appState.currentUserId = null; appState.activeModuleId = null; saveSession(); renderAll(); showToast("Signed out.");
     });
   }
 
-  if (elements.loadDemoBtn) {
-    elements.loadDemoBtn.addEventListener("click", () => {
-      appState.data = seedDemoData();
-      appState.currentUserId = null;
-      appState.editingCaseId = null;
-      appState.editingAppointmentId = null;
-      appState.editingScheduleId = null;
-      appState.editingDocumentId = null;
-      saveData();
-      saveSession();
-      renderAll();
-      showToast("System data reset.");
-    });
-  }
-
-  elements.moduleList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-module-target]");
-    if (button) setActiveModule(button.dataset.moduleTarget);
+  elements.moduleList.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-module-target]");
+    if (b) setActiveModule(b.dataset.moduleTarget);
   });
 
-  elements.adminNav.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-module-target]");
-    if (button) setActiveModule(button.dataset.moduleTarget);
+  elements.adminNav.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-module-target]");
+    if (b) setActiveModule(b.dataset.moduleTarget);
   });
 
-  elements.profileForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const user = getCurrentUser();
-    if (!user || user.role === "client") return;
-    const formData = new FormData(event.currentTarget);
-    user.name = formData.get("name").trim();
-    user.email = formData.get("email").trim();
-    user.phone = formData.get("phone").trim();
-    user.department = formData.get("department").trim();
-    saveData();
-    renderAll();
-    showToast("Profile updated.");
+  elements.profileForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const u = getCurrentUser(); if (!u || u.role === "client") return;
+    const fd = new FormData(e.currentTarget);
+    u.name = fd.get("name"); u.email = fd.get("email"); u.phone = fd.get("phone"); u.department = fd.get("department");
+    saveData(); renderAll(); showToast("Profile updated.");
   });
 
-  elements.deleteProfileBtn.addEventListener("click", () => {
-    const user = getCurrentUser();
-    if (!user || user.role === "client") return showToast("Client accounts are view-only.");
-    appState.data.users = appState.data.users.filter((item) => item.id !== user.id);
-    appState.data.notifications = appState.data.notifications.filter((item) => item.userId !== user.id);
-    appState.currentUserId = null;
-    saveData();
-    saveData();
-    saveSession();
-    renderAll();
-    showToast("Profile deleted.");
-  });
-
-  elements.userManagementForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const user = getCurrentUser();
-    if (!user || user.role !== "admin") return;
-    const formData = new FormData(event.currentTarget);
-    const targetUser = appState.data.users.find((item) => item.id === formData.get("userId"));
-    if (targetUser) {
-      const oldRole = targetUser.role;
-      targetUser.role = formData.get("role");
-      showToast(`User ${targetUser.name} updated from ${titleCase(oldRole)} to ${titleCase(targetUser.role)}.`);
-      addNotification(targetUser.id, "Role Update Notification", `Your system role has been updated to ${titleCase(targetUser.role)}.`);
-    }
-    saveData();
-    renderAll();
-  });
-
-  elements.userTableBody.addEventListener("click", (event) => {
-    const statusBtn = event.target.closest("[data-toggle-status]");
-    if (statusBtn) {
-      const targetUser = appState.data.users.find(u => u.id === statusBtn.dataset.toggleStatus);
-      if (targetUser) {
-        targetUser.status = targetUser.status === "blocked" ? "active" : "blocked";
-        showToast(`Access for ${targetUser.name} is now ${targetUser.status === "blocked" ? "Restricted" : "Enabled"}.`);
-        if (targetUser.status === "blocked") {
-           addNotification(targetUser.id, "Account Restricted", "Your access to the platform has been restricted by an administrator.");
-        }
-      }
-      saveData();
-      renderAll();
-    }
-  });
-
-  elements.generateReportBtn.addEventListener("click", generateReport);
-
-  elements.adminNav.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-module-target]");
-    if (button) setActiveModule(button.dataset.moduleTarget);
-  });
-
-  // Notification Individual Delete
-  elements.notificationList.addEventListener("click", (event) => {
-    const delBtn = event.target.closest("[data-delete-notif]");
+  elements.profileForm.addEventListener("click", (e) => {
+    const delBtn = e.target.closest("#deleteProfileBtn");
     if (delBtn) {
-      const id = delBtn.dataset.deleteNotif;
-      appState.data.notifications = appState.data.notifications.filter(n => n.id !== id);
-      saveData();
-      renderNotifications();
-      showToast("Notification deleted.");
+      if (!confirm("Are you sure you want to permanently delete your account? This action cannot be undone.")) return;
+      const u = getCurrentUser(); if (!u || u.role === "client") return;
+      appState.data.users = appState.data.users.filter(i => i.id !== u.id);
+      appState.currentUserId = null; saveData(); saveSession(); renderAll(); showToast("Account deleted.");
     }
   });
 
-  // Bulk Notification Delete
+  elements.userManagementForm.addEventListener("input", (e) => {
+    if (e.target.id === "userComboboxInput") {
+      const q = e.target.value.toLowerCase();
+      const res = document.getElementById("comboboxResults");
+      const items = res.querySelectorAll(".combobox-item");
+      res.classList.remove("hidden");
+      let m = 0; items.forEach(i => { const match = i.dataset.search.includes(q); i.classList.toggle("hidden", !match); if (match) m++; });
+      if (m === 0) res.classList.add("hidden");
+    }
+  });
+
+  elements.userManagementForm.addEventListener("click", (e) => {
+    const item = e.target.closest(".combobox-item");
+    if (item) {
+      const input = document.getElementById("userComboboxInput");
+      input.value = item.textContent.split(" • ")[0];
+      document.getElementById("selectedUserId").value = item.dataset.id;
+      document.getElementById("comboboxResults").classList.add("hidden");
+      input.classList.add("selection-made");
+    }
+  });
+
+  elements.userManagementForm.addEventListener("change", (e) => {
+    if (e.target.name === "role") e.target.classList.toggle("selection-made", e.target.value !== "");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".combobox-wrapper")) document.getElementById("comboboxResults")?.classList.add("hidden");
+  });
+
+  elements.userManagementForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const userId = document.getElementById("selectedUserId").value;
+    const newRole = new FormData(e.currentTarget).get("role");
+    if (!userId || !newRole) return showToast("Select user and role.");
+    const target = appState.data.users.find(u => u.id === userId);
+    if (target) { target.role = newRole; addNotification(target.id, "Role Update", `You are now a ${newRole}.`); }
+    saveData(); renderAll(); showToast("User role updated.");
+  });
+
+  elements.userTableBody.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-toggle-status]");
+    if (btn) {
+      const u = appState.data.users.find(i => i.id === btn.dataset.toggleStatus);
+      if (u) { u.status = u.status === "blocked" ? "active" : "blocked"; saveData(); renderAll(); showToast(`User ${u.status}.`); }
+    }
+  });
+
+  elements.notificationList.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-delete-notif]");
+    if (btn) {
+      appState.data.notifications = appState.data.notifications.filter(n => n.id !== btn.dataset.deleteNotif);
+      saveData(); renderNotifications(); showToast("Deleted.");
+    }
+  });
+
   elements.deleteSelectedNotificationsBtn.addEventListener("click", () => {
-    const selectedCheckboxes = document.querySelectorAll(".notif-checkbox:checked");
-    if (!selectedCheckboxes.length) return showToast("Select notifications to delete.");
-    
-    const idsToDelete = Array.from(selectedCheckboxes).map(cb => cb.dataset.notifId);
-    appState.data.notifications = appState.data.notifications.filter(n => !idsToDelete.includes(n.id));
-    saveData();
-    renderNotifications();
-    showToast(`${idsToDelete.length} notifications deleted.`);
+    const ids = Array.from(document.querySelectorAll(".notif-checkbox:checked")).map(cb => cb.dataset.notifId);
+    if (!ids.length) return showToast("No items selected.");
+    appState.data.notifications = appState.data.notifications.filter(n => !ids.includes(n.id));
+    saveData(); renderNotifications(); showToast("Selected items deleted.");
   });
 
-  // User Search in Management
-  elements.userManagementForm.addEventListener("input", (event) => {
-    if (event.target.id === "userSearchInput") {
-      const q = event.target.value.toLowerCase();
-      const options = document.querySelectorAll("#userSelect option");
-      options.forEach(opt => {
-        const matches = opt.dataset.search.includes(q);
-        opt.style.display = matches ? "block" : "none";
-        if (matches && !document.querySelector("#userSelect").value) {
-           document.querySelector("#userSelect").value = opt.value;
-        }
-      });
-    }
+  window.onscroll = () => { if (window.scrollY > 300) elements.scrollToTopBtn.classList.remove("hidden"); else elements.scrollToTopBtn.classList.add("hidden"); };
+  elements.scrollToTopBtn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  elements.generateReportBtn.addEventListener("click", () => {
+    elements.reportOutputText.textContent = `Report: ${appState.data.users.length} users registered.`;
+    showToast("Report ready.");
   });
-
-  // Scroll to top logic
-  window.onscroll = () => {
-    if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
-      elements.scrollToTopBtn.classList.remove("hidden");
-    } else {
-      elements.scrollToTopBtn.classList.add("hidden");
-    }
-  };
-
-  elements.scrollToTopBtn.addEventListener("click", () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
-
-  if (elements.logoutBtn) {
-    elements.logoutBtn.addEventListener("click", () => {
-      appState.currentUserId = null;
-      appState.activeModuleId = null;
-      saveSession();
-      renderAll();
-      showToast("Signed out successfully.");
-    });
-  }
 }
 
-loadData();
-bindEvents();
-renderAll();
-fetchBackendStatus();
+loadData(); bindEvents(); renderAll(); fetchBackendStatus();

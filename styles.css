@@ -5,6 +5,10 @@
   --muted: #666666;
   --border: #d6d6d6;
   --primary: #1f4e79;
+  --danger: #b42318;
+  --danger-bg: #fef3f2;
+  --success: #027a48;
+  --success-bg: #ecfdf3;
 }
 
 * {
@@ -196,6 +200,37 @@ textarea {
   border: 1px solid var(--border);
   background-color: #f0f0f0;
   font-size: 13px;
+  border-radius: 4px;
+}
+
+.status-tag[data-status="active"] {
+  background-color: var(--success-bg);
+  color: var(--success);
+  border-color: #abefc6;
+}
+
+.status-tag[data-status="blocked"] {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+  border-color: #fca5a5;
+}
+
+.role-badge[data-role="admin"] {
+  background-color: #eff8ff;
+  color: #175cd3;
+  border-color: #b2ddff;
+}
+
+.role-badge[data-role="lawyer"] {
+  background-color: #f9f5ff;
+  color: #6941c6;
+  border-color: #e9d7fe;
+}
+
+.role-badge[data-role="assistant"] {
+  background-color: #fffaeb;
+  color: #b54708;
+  border-color: #fedf89;
 }
 
 .hero-card,
@@ -234,15 +269,58 @@ textarea {
 .primary-btn,
 .table-btn,
 .module-list button {
-  border: 1px solid var(--border);
-  background-color: #f3f3f3;
   padding: 10px 12px;
   cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
-.tab-btn.active,
+#logoutBtn {
+  color: var(--danger);
+  border-color: #fca5a5;
+  background-color: #fff1f2;
+  font-weight: 600;
+}
+
+#logoutBtn:hover {
+  background-color: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+
 .primary-btn {
   background-color: var(--primary);
+  color: #fff;
+  border-radius: 4px;
+}
+
+.table-btn[data-toggle-status] {
+  min-width: 80px;
+}
+
+[data-toggle-status]:not(:disabled):hover {
+  background-color: #eee;
+}
+
+.success-action {
+  color: var(--success);
+  border-color: #abefc6;
+  background-color: var(--success-bg);
+}
+
+.success-action:hover {
+  background-color: var(--success);
+  color: #fff;
+}
+
+.danger-action {
+  color: var(--danger);
+  border-color: #fca5a5;
+  background-color: var(--danger-bg);
+}
+
+.danger-action:hover {
+  background-color: var(--danger);
   color: #fff;
 }
 

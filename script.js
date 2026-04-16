@@ -520,7 +520,7 @@ function renderUserTable() {
       <td><span class="status-tag" data-status="${item.status || "active"}">${titleCase(item.status || "active")}</span></td>
       <td>
         ${item.role !== "admin" ? `
-          <button class="table-btn" data-toggle-status="${item.id}" type="button">${item.status === "blocked" ? "Enable" : "Disable"}</button>
+          <button class="table-btn ${item.status === "blocked" ? "success-action" : "danger-action"}" data-toggle-status="${item.id}" type="button">${item.status === "blocked" ? "Enable" : "Disable"}</button>
         ` : "<em>System Owner</em>"}
       </td>
     </tr>

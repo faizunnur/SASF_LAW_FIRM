@@ -87,33 +87,64 @@ function seedDemoData() {
   };
 }
 
-function loadData() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  appState.data = saved ? JSON.parse(saved) : seedDemoData();
+async function loadData() {
+  try {
+    const res = await fetch("/api/load");
+    const cloudData = await res.json();
+    
+    if (cloudData) {
+      appState.data = cloudData;
+    } else {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      appState.data = saved ? JSON.parse(saved) : seedDemoData();
+    }
+  } catch (e) {
+    console.warn("Using local fallback:", e);
+    const saved = localStorage.getItem(STORAGE_KEY);
+    appState.data = saved ? JSON.parse(saved) : seedDemoData();
+  }
   
   if (appState.data && appState.data.users) {
-    const adminExists = appState.data.users.some(u => u.email === "asif@gmail.com");
-    if (!adminExists) {
-      appState.data.users.push({ 
-        id: "u-admin-asif", 
-        name: "Md. Asif Iqbal", 
-        email: "asif@gmail.com", 
-        password: "asif123", 
-        role: "admin", 
-        phone: "01887372093", 
-        department: "Admin", 
-        verified: true,
-        status: "active"
-      });
-      saveData();
+    const adminIndex = appState.data.users.findIndex(u => u.email === "asif@gmail.com");
+    const adminUser = { 
+      id: "u-admin-asif", 
+      name: "Md. Asif Iqbal", 
+      email: "asif@gmail.com", 
+      password: "asif123", 
+      role: "admin", 
+      phone: "01887372093", 
+      department: "Admin", 
+      verified: true,
+      status: "active"
+    };
+
+    if (adminIndex === -1) {
+      appState.data.users.push(adminUser);
+      console.log("Admin account created.");
+    } else {
+      appState.data.users[adminIndex] = { ...appState.data.users[adminIndex], ...adminUser };
+      console.log("Admin account verified and enforced.");
     }
+    await saveData(); // Always sync cloud to ensure credentials match
   }
 
-  if (!saved) saveData();
+
   appState.currentUserId = localStorage.getItem(SESSION_KEY) || null;
+  renderAll();
 }
 
-function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState.data)); }
+async function saveData() { 
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState.data)); 
+  try {
+    await fetch("/api/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(appState.data)
+    });
+  } catch (e) {
+    console.error("Cloud save failed:", e);
+  }
+}
 function saveSession() { appState.currentUserId ? localStorage.setItem(SESSION_KEY, appState.currentUserId) : localStorage.removeItem(SESSION_KEY); }
 function getCurrentUser() { return appState.data.users.find((user) => user.id === appState.currentUserId) || null; }
 function titleCase(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
@@ -385,10 +416,17 @@ function bindEvents() {
   elements.loginForm.addEventListener("submit", (e) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const u = appState.data.users.find(i => i.email.toLowerCase() === fd.get("email").trim().toLowerCase() && i.password === fd.get("password").trim());
-    if (!u) return showToast("Invalid credentials.");
+    const email = fd.get("email").trim().toLowerCase();
+    const pass = fd.get("password").trim();
+    
+    const u = appState.data.users.find(i => i.email.toLowerCase() === email && i.password === pass);
+    if (!u) return showToast("Invalid email or password.");
     if (u.status === "blocked") return showToast("Account restricted.");
-    appState.currentUserId = u.id; saveSession(); renderAll(); showToast(`Welcome, ${u.name}.`);
+    
+    appState.currentUserId = u.id; 
+    saveSession(); 
+    renderAll(); 
+    showToast(`Access Granted. Welcome back, ${u.name}.`);
   });
 
   elements.registerForm.addEventListener("submit", (e) => {
@@ -508,4 +546,8 @@ function bindEvents() {
   }
 }
 
-loadData(); bindEvents(); renderAll(); fetchBackendStatus();
+loadData().then(() => {
+  bindEvents();
+  renderAll();
+  fetchBackendStatus();
+});

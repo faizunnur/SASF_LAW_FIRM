@@ -74,14 +74,25 @@
         </div>
 
         <div class="auth-view" id="registerView">
-          <form id="registerForm" class="form-grid form-grid-two">
-            <label><span>Full Name</span><input type="text" name="name" placeholder="Full name" required></label>
-            <label><span>Email</span><input type="email" name="email" placeholder="Email address" required></label>
-            <label><span>Password</span><input type="password" name="password" placeholder="Create password" required></label>
-            <label><span>Role</span><input type="text" name="roleLabel" value="Client" readonly></label>
-            <label><span>Phone</span><input type="text" name="phone" placeholder="Phone number" required></label>
-            <label><span>Occupation</span><input type="text" name="department" placeholder="Student, Business Owner, Engineer..." required></label>
-            <button class="primary-btn" type="submit">Create Account</button>
+          <div class="registration-header-bar">Online Registration</div>
+          <form id="registerForm" class="branded-registration-form">
+            <div class="form-row-2col">
+              <label><span>Full Name</span><input type="text" name="name" placeholder="Full name" required></label>
+              <label><span>Phone Number</span><input type="text" name="phone" placeholder="Phone number" required></label>
+            </div>
+            <div class="form-row-full">
+              <label><span>Email Address</span><input type="email" name="email" placeholder="Email address" required></label>
+            </div>
+            <div class="form-row-full">
+              <label><span>Create Password</span><input type="password" name="password" placeholder="Create password" required></label>
+            </div>
+            <div class="form-row-full">
+              <label><span>Occupation</span><input type="text" name="department" placeholder="Your occupation" required></label>
+            </div>
+            <div class="form-row-full">
+              <label><span>Default Role</span><input type="text" name="roleLabel" value="Client" readonly class="readonly-input"></label>
+            </div>
+            <button class="primary-btn branded-submit-btn" type="submit">Complete Registration</button>
           </form>
         </div>
 

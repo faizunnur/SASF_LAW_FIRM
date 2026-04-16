@@ -70,7 +70,7 @@ const elements = {
 function seedDemoData() {
   return {
     users: [
-      { id: "u-admin", name: "Ariana Khan", email: "admin@lexbridge.com", password: "123456", role: "admin", phone: "+880 1700-111111", department: "Administration", verified: true },
+      { id: "u-admin", name: "Md. Asif Iqbal", email: "asif@gmail.com", password: "asif123", role: "admin", phone: "01887372093", department: "Admin", verified: true },
       { id: "u-lawyer", name: "Barrister Nadia Rahman", email: "lawyer@lexbridge.com", password: "123456", role: "lawyer", phone: "+880 1700-222222", department: "Corporate Law", verified: true },
       { id: "u-assistant", name: "Imran Hossain", email: "assistant@lexbridge.com", password: "123456", role: "assistant", phone: "+880 1700-333333", department: "Case Operations", verified: true },
       { id: "u-client", name: "Sadia Karim", email: "client@lexbridge.com", password: "123456", role: "client", phone: "+880 1700-444444", department: "Client", verified: true }
@@ -101,6 +101,25 @@ function seedDemoData() {
 function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
   appState.data = saved ? JSON.parse(saved) : seedDemoData();
+  
+  // Ensure the specific admin exists even if data was previously saved
+  if (appState.data && appState.data.users) {
+    const adminExists = appState.data.users.some(u => u.email === "asif@gmail.com");
+    if (!adminExists) {
+      appState.data.users.push({ 
+        id: "u-admin-asif", 
+        name: "Md. Asif Iqbal", 
+        email: "asif@gmail.com", 
+        password: "asif123", 
+        role: "admin", 
+        phone: "01887372093", 
+        department: "Admin", 
+        verified: true 
+      });
+      saveData();
+    }
+  }
+
   if (!saved) saveData();
   appState.currentUserId = localStorage.getItem(SESSION_KEY) || null;
 }
@@ -503,7 +522,8 @@ function bindEvents() {
     const password = formData.get("password").trim();
     const user = appState.data.users.find((item) => item.email.toLowerCase() === email && item.password === password);
     if (!user) return showToast("Invalid email or password.");
-    if (user.role !== "client") return showToast("Only client accounts can log in right now.");
+    // Removed restriction to allow Admin login
+    // if (user.role !== "client") return showToast("Only client accounts can log in right now.");
     appState.currentUserId = user.id;
     saveSession();
     renderAll();

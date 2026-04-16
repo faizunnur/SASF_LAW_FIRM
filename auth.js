@@ -4,7 +4,7 @@ const SESSION_KEY = "lexbridge-session-v1";
 function seedDemoData() {
   return {
     users: [
-      { id: "u-admin", name: "Ariana Khan", email: "admin@lexbridge.com", password: "123456", role: "admin", phone: "+880 1700-111111", department: "Administration", verified: true },
+      { id: "u-admin", name: "Md. Asif Iqbal", email: "asif@gmail.com", password: "asif123", role: "admin", phone: "01887372093", department: "Admin", verified: true },
       { id: "u-lawyer", name: "Barrister Nadia Rahman", email: "lawyer@lexbridge.com", password: "123456", role: "lawyer", phone: "+880 1700-222222", department: "Corporate Law", verified: true },
       { id: "u-assistant", name: "Imran Hossain", email: "assistant@lexbridge.com", password: "123456", role: "assistant", phone: "+880 1700-333333", department: "Case Operations", verified: true },
       { id: "u-client", name: "Sadia Karim", email: "client@lexbridge.com", password: "123456", role: "client", phone: "+880 1700-444444", department: "Client", verified: true }
@@ -34,13 +34,29 @@ function seedDemoData() {
 
 function getStoredData() {
   const saved = localStorage.getItem(STORAGE_KEY);
+  const data = saved ? JSON.parse(saved) : seedDemoData();
 
-  if (saved) {
-    return JSON.parse(saved);
+  // Ensure the specific admin exists even if data was previously saved
+  if (data && data.users) {
+    const adminExists = data.users.some(u => u.email === "asif@gmail.com");
+    if (!adminExists) {
+      data.users.push({ 
+        id: "u-admin-asif", 
+        name: "Md. Asif Iqbal", 
+        email: "asif@gmail.com", 
+        password: "asif123", 
+        role: "admin", 
+        phone: "01887372093", 
+        department: "Admin", 
+        verified: true 
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
   }
 
-  const data = seedDemoData();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  if (!saved) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
   return data;
 }
 
@@ -87,10 +103,10 @@ function wireLoginPage() {
       return;
     }
 
-    if (user.role !== "client") {
-      showMessage(feedback, "Only client accounts can log in right now.", "error");
-      return;
-    }
+    // if (user.role !== "client") {
+    //   showMessage(feedback, "Only client accounts can log in right now.", "error");
+    //   return;
+    // }
 
     localStorage.setItem(SESSION_KEY, user.id);
     showMessage(feedback, `Welcome back, ${user.name}. Redirecting...`, "success");

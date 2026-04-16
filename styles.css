@@ -288,6 +288,54 @@ textarea {
   border-color: var(--danger);
 }
 
+.scroll-top-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  transition: all 0.3s ease;
+}
+
+.scroll-top-btn:hover {
+  transform: translateY(-5px);
+  background-color: #163754;
+}
+
+#deleteProfileBtn {
+  background-color: var(--danger-bg) !important;
+  color: var(--danger) !important;
+  border-color: #fca5a5 !important;
+  font-weight: bold;
+}
+
+#deleteProfileBtn:hover {
+  background-color: var(--danger) !important;
+  color: #fff !important;
+}
+
+/* Gap Enhancement */
+#userManagementSection .section-headline {
+  margin-bottom: 30px;
+}
+
+.user-search-wrapper {
+  margin-bottom: 20px;
+  display: grid;
+  gap: 15px;
+}
+
 .primary-btn {
   background-color: var(--primary);
   color: #fff;
@@ -316,12 +364,62 @@ textarea {
 .danger-action {
   color: var(--danger);
   border-color: #fca5a5;
-  background-color: var(--danger-bg);
+  background-color: #fff1f2;
 }
 
 .danger-action:hover {
-  background-color: var(--danger);
+  background-color: #f04438;
   color: #fff;
+  border-color: #f04438;
+}
+
+/* Notification Grid System */
+.notif-grid {
+  display: grid;
+  grid-template-columns: 40px 1fr 50px;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.notif-check {
+  display: flex;
+  justify-content: center;
+  padding-top: 5px;
+}
+
+.notif-content h4 {
+  margin: 0 0 5px;
+  font-size: 16px;
+}
+
+.notif-content p {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+.notif-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.notif-actions button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-card {
+  padding: 20px;
+  margin-bottom: 15px;
+  border-left: 4px solid var(--border);
+}
+
+.notification-card:has(.notif-checkbox:checked) {
+  border-left-color: var(--primary);
+  background-color: #f0f7ff;
 }
 
 .form-grid {
@@ -439,17 +537,27 @@ td {
 
 .toast {
   position: fixed;
-  right: 15px;
-  bottom: 15px;
-  background-color: #333;
+  left: 50%;
+  top: 25px;
+  transform: translateX(-50%) translateY(-20px);
+  background-color: #162033;
   color: #fff;
-  padding: 10px 14px;
+  padding: 14px 24px;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
   opacity: 0;
-  transition: opacity 0.2s;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 9999;
+  font-weight: 600;
+  text-align: center;
+  min-width: 300px;
 }
 
 .toast.show {
   opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 .empty-state {

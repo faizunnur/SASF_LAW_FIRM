@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistant Dashboard | SASF LAW FIRM</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="assistant.css">
+</head>
+<body>
+  <div class="assistant-shell">
+    <!-- Sidebar -->
+    <aside class="assistant-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand-mark">SL</div>
+        <span class="sidebar-brand-name">SASF LAW FIRM</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="javascript:void(0)" class="nav-item active" data-section="dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-section="cases">
+          <span class="nav-icon">💼</span>
+          <span class="nav-text">Cases</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-section="documents">
+          <span class="nav-icon">📄</span>
+          <span class="nav-text">Documents</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-section="appointments">
+          <span class="nav-icon">📅</span>
+          <span class="nav-text">Appointments</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-section="search">
+          <span class="nav-icon">🔍</span>
+          <span class="nav-text">Search/Filter</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="ghost-btn full-width" type="button">
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="assistant-main">
+      <header class="dashboard-header">
+        <div class="header-title">
+          <h1 id="pageTitle">Dashboard Overview</h1>
+          <p id="pageSubtitle">Welcome back, Assistant</p>
+        </div>
+        <div class="user-controls">
+          <div class="user-banner" id="userBanner" style="margin-top:0; border:none; background:transparent; padding:0;">
+            <!-- Dynamic Content -->
+          </div>
+        </div>
+      </header>
+
+      <!-- Dashboard Section -->
+      <section id="dashboard" class="module-section active">
+        <div class="assistant-stats">
+          <div class="stat-card">
+            <h3 id="statTotalCases">0</h3>
+            <p>Total Cases</p>
+          </div>
+          <div class="stat-card">
+            <h3 id="statPendingAppts">0</h3>
+            <p>Pending Appointments</p>
+          </div>
+          <div class="stat-card">
+            <h3 id="statTotalDocs">0</h3>
+            <p>Documents Managed</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-heading">
+            <h2>Recent Activities</h2>
+          </div>
+          <div id="recentActivityList" class="card-list">
+            <!-- Dynamic Content -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Cases Section -->
+      <section id="cases" class="module-section">
+        <div class="section-headline" style="margin-bottom: 20px;">
+          <h3>Case Registry</h3>
+          <button class="primary-btn" id="openCreateCaseModal">Create New Case +</button>
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Case ID</th>
+                <th>Title</th>
+                <th>Client</th>
+                <th>Lawyer</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="caseTableBody">
+              <!-- Dynamic Content -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Documents Section -->
+      <section id="documents" class="module-section">
+        <div class="section-headline" style="margin-bottom: 20px;">
+          <h3>Document Repository</h3>
+          <button class="primary-btn" id="openCreateDocModal">Add Document +</button>
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Doc ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="documentTableBody">
+              <!-- Dynamic Content -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Appointments Section -->
+      <section id="appointments" class="module-section">
+        <div class="section-headline" style="margin-bottom: 20px;">
+          <h3>Appointment Schedule</h3>
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date/Time</th>
+                <th>Client</th>
+                <th>Type</th>
+                <th>Payment Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="appointmentTableBody">
+              <!-- Dynamic Content -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Search & Filter Section -->
+      <section id="search" class="module-section">
+        <div class="search-filter-card">
+          <div class="search-field">
+            <label><span>Global Search</span></label>
+            <input type="text" id="globalSearchInput" placeholder="Case ID, Client Name, Keywords...">
+          </div>
+          <div class="filter-field">
+            <label><span>Case Type</span></label>
+            <select id="filterCaseType">
+              <option value="">All Types</option>
+              <option value="Criminal">Criminal</option>
+              <option value="Civil">Civil</option>
+              <option value="Family">Family</option>
+              <option value="Corporate">Corporate</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label><span>Priority</span></label>
+            <select id="filterPriority">
+              <option value="">All Priorities</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Subject</th>
+                <th>Client</th>
+                <th>Lawyer</th>
+                <th>Priority</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="searchTableBody">
+              <!-- Dynamic Content -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <div id="caseModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="caseModalTitle">Create New Case</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <form id="caseForm">
+        <div class="modal-body">
+          <input type="hidden" name="id">
+          <div class="form-grid">
+            <label><span>Case Title</span><input type="text" name="title" required></label>
+            <label><span>Client Name</span><input type="text" name="client" required></label>
+            <label><span>Assign Lawyer</span>
+              <select name="lawyerId" id="lawyerSelect" required></select>
+            </label>
+            <div class="form-grid-two" style="grid-template-columns: 1fr 1fr;">
+              <label><span>Case Type</span>
+                <select name="type">
+                  <option value="Civil">Civil</option>
+                  <option value="Criminal">Criminal</option>
+                  <option value="Family">Family</option>
+                  <option value="Corporate">Corporate</option>
+                </select>
+              </label>
+              <label><span>Priority</span>
+                <select name="priority">
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </label>
+            </div>
+            <label><span>Status</span>
+              <select name="status">
+                <option value="Under Review">Under Review</option>
+                <option value="In Progress">In Progress</option>
+                <option value="On Hold">On Hold</option>
+                <option value="Settled">Settled</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </label>
+            <label><span>Deadline / Next Hearing</span><input type="date" name="hearingDate"></label>
+            <label><span>Additional Information</span><textarea name="notes" rows="3"></textarea></label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="table-btn close-modal">Cancel</button>
+          <button type="submit" class="primary-btn">Save Case Details</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="docModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="docModalTitle">Add Document</h2>
+        <button class="close-modal">&times;</button>
+      </div>
+      <form id="docForm">
+        <div class="modal-body">
+          <input type="hidden" name="id">
+          <div class="form-grid">
+            <label><span>Document Name</span><input type="text" name="name" required></label>
+            <label><span>Category</span>
+              <select name="category">
+                <option value="Evidence">Evidence</option>
+                <option value="Contract">Contract</option>
+                <option value="Legal Notice">Legal Notice</option>
+                <option value="Identification">Identification</option>
+              </select>
+            </label>
+            <label><span>Related Case ID</span><input type="text" name="caseId" placeholder="e.g. C-1024"></label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="table-btn close-modal">Cancel</button>
+          <button type="submit" class="primary-btn">Save Document</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script src="assistant.js"></script>
+</body>
+</html>

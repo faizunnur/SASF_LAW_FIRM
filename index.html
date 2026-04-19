@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SASF LAW FIRM</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <nav class="topbar">
+        <div class="brand">
+          <span class="brand-mark">SL</span>
+          <div>
+            <p class="brand-name">SASF LAW FIRM</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-btn hidden" id="logoutBtn" type="button">Logout</button>
+        </div>
+      </nav>
+
+      <nav class="main-navbar">
+        <div class="nav-left">
+          <a href="#authSection">Home</a>
+          <a href="#summarySection">Overview</a>
+          <a href="#moduleSection">Modules</a>
+          <a href="#dashboardSection">Dashboard</a>
+        </div>
+        <div class="nav-right">
+          <a href="login.html">Login</a>
+          <a href="register.html">Register</a>
+        </div>
+      </nav>
+
+      <div class="hero-grid">
+        <section class="hero-copy">
+          <h1>Simple law firm management website.</h1>
+          <p class="hero-text">
+            This project shows how a law firm can manage users, cases, appointments, schedules,
+            documents, reports and notifications on the client side.
+          </p>
+          <div class="hero-pills">
+            <span>Client</span>
+            <span>Lawyer</span>
+            <span>Assistant</span>
+            <span>Admin</span>
+          </div>
+        </section>
+      </div>
+    </header>
+
+    <main class="main-grid">
+      <section class="panel auth-panel" id="authSection">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">Access Control</p>
+            <h2>Register, login, and recover password</h2>
+          </div>
+          <div class="tab-switch">
+            <button class="tab-btn active" data-auth-tab="login" type="button">Login</button>
+            <button class="tab-btn" data-auth-tab="register" type="button">Register</button>
+            <button class="tab-btn" data-auth-tab="recover" type="button">Recover</button>
+          </div>
+        </div>
+
+        <div class="auth-view active" id="loginView">
+          <form id="loginForm" class="form-grid">
+            <label><span>Email</span><input type="email" name="email" placeholder="Enter email" required></label>
+            <label><span>Password</span><input type="password" name="password" placeholder="Enter password" required></label>
+            <button class="primary-btn" type="submit">Login</button>
+          </form>
+        </div>
+
+        <div class="auth-view" id="registerView">
+          <div class="registration-header-bar">Online Registration</div>
+          <form id="registerForm" class="branded-registration-form">
+            <div class="form-row-2col">
+              <label><span>Full Name</span><input type="text" name="name" placeholder="Full name" required></label>
+              <label><span>Phone Number</span><input type="text" name="phone" placeholder="Phone number" required></label>
+            </div>
+            <div class="form-row-full">
+              <label><span>Email Address</span><input type="email" name="email" placeholder="Email address" required></label>
+            </div>
+            <div class="form-row-full">
+              <label><span>Create Password</span><input type="password" name="password" placeholder="Create password" required></label>
+            </div>
+            <div class="form-row-full">
+              <label><span>Occupation</span><input type="text" name="department" placeholder="Your occupation" required></label>
+            </div>
+            <div class="form-row-full">
+              <label><span>Default Role</span><input type="text" name="roleLabel" value="Client" readonly class="readonly-input"></label>
+            </div>
+            <button class="primary-btn branded-submit-btn" type="submit">Complete Registration</button>
+          </form>
+        </div>
+
+        <div class="auth-view" id="recoverView">
+          <form id="recoverForm" class="form-grid">
+            <label><span>Email</span><input type="email" name="email" placeholder="Enter your registered email" required></label>
+            <button class="primary-btn" type="submit">Send Recovery Notice</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel summary-panel" id="summarySection">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">Live Status</p>
+            <h2>System Overview</h2>
+          </div>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="report-box" id="backendStatusBox">
+          <h4>Backend Status</h4>
+          <p>Checking Node server and Neon database connection...</p>
+        </div>
+        <div class="user-banner" id="userBanner">
+          <div>
+            <p class="section-kicker">Current Session</p>
+            <h3>No active user</h3>
+            <p>Login or create a new account to explore the role-based dashboard.</p>
+          </div>
+          <span class="role-badge">Guest</span>
+        </div>
+      </section>
+
+      <section class="panel sidebar-panel" id="moduleSection">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">Workspace</p>
+            <h2>Modules</h2>
+          </div>
+        </div>
+        <div class="module-list" id="moduleList"></div>
+      </section>
+
+      <section class="panel dashboard-panel" id="dashboardSection">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">Dashboard</p>
+            <h2 id="dashboardTitle">Project dashboard</h2>
+            <div id="adminNav" class="admin-nav-bar hidden"></div>
+          </div>
+        </div>
+
+        <div class="dashboard-stack">
+          <section class="dashboard-section" id="profileSection">
+            <div class="section-headline">
+              <h3>Profile Handling</h3>
+            </div>
+            <form id="profileForm"></form>
+          </section>
+
+          <section class="dashboard-section" id="notificationSection">
+            <div class="section-headline">
+              <h3>Notifications</h3>
+              <div class="action-row" id="notificationActions">
+                <button class="table-btn danger-action" id="deleteSelectedNotifications" type="button">Delete Selected 🗑️</button>
+              </div>
+            </div>
+            <div id="notificationList" class="card-list"></div>
+          </section>
+
+          <section class="dashboard-section" id="userManagementSection">
+            <div class="section-headline"><h3>User Management & Role Control</h3></div>
+            <form id="userManagementForm" class="form-grid form-grid-two"></form>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User ID</th><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Status</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="userTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="reportSection">
+            <div class="section-headline">
+              <h3>Report Generation 📊</h3>
+            </div>
+            
+            <div class="report-controls-grid">
+              <div class="report-filter-wrapper">
+                <label><span>Select Report Range</span>
+                  <select id="reportRangeSelect">
+                    <option value="weekly">Weekly Report (Last 7 Days)</option>
+                    <option value="monthly" selected>Monthly Report (Last 30 Days)</option>
+                    <option value="yearly">Yearly Report (Current Year)</option>
+                  </select>
+                </label>
+              </div>
+              <div class="report-btn-group">
+                <button class="report-card-btn" id="genDetailsReportBtn">
+                  <span class="icon">📄</span>
+                  <div class="report-card-text">
+                    <strong>Details Report</strong>
+                    <span>Case & User Activities</span>
+                  </div>
+                </button>
+                <button class="report-card-btn" id="genTransReportBtn">
+                  <span class="icon">💰</span>
+                  <div class="report-card-text">
+                    <strong>Transaction Report</strong>
+                    <span>Financial Summaries</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="report-display-area hidden" id="reportOutputBox">
+              <div class="report-header">
+                <h4 id="reportTitle">Generated Report</h4>
+                <div class="report-header-actions">
+                   <button class="primary-btn-sm" type="button" onclick="window.print()">Download PDF 📥</button>
+                </div>
+              </div>
+              <div id="reportOutputText" class="report-content-box">
+                <!-- Dynamic content goes here -->
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <button id="scrollToTopBtn" class="scroll-top-btn hidden" type="button" aria-label="Scroll to top">↑</button>
+  <script src="script.js"></script>
+</body>
+</html>

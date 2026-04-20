@@ -147,8 +147,8 @@ async function loadData() {
 
   // URL Cleanup: If logged in, update URL to reflect role
   const user = getCurrentUser();
-  if (user && window.location.pathname === "/") {
-    window.history.pushState(null, "", `/${user.role}`);
+  if (user && (window.location.pathname === "/" || window.location.pathname.includes("index.html"))) {
+    window.history.replaceState(null, "", `/${user.role}`);
   }
 
   renderAll();
@@ -220,10 +220,6 @@ function renderUserBanner() {
     return;
   }
   elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} - ${titleCase(user.role)} - ${user.department}</p></div><span class="role-badge" data-role="${user.role}">${titleCase(user.role)}</span>`;
-
-  if (elements.dashboardTitle) {
-    elements.dashboardTitle.textContent = `Welcome back, ${user.name.split(" ")[0]}!`;
-  }
 }
 
 function renderBackendStatus() {
@@ -485,7 +481,9 @@ function renderAll() {
   document.querySelector(".hero-grid").classList.toggle("hidden", isUser);
 
   if (elements.logoutBtn) elements.logoutBtn.classList.toggle("hidden", !user);
-  elements.dashboardTitle.textContent = user ? `${titleCase(user.role)} Portal` : "Law Firm Portal";
+  if (elements.dashboardTitle) {
+    elements.dashboardTitle.textContent = user ? `Welcome back, ${user.name.split(" ")[0]}!` : "Law Firm Portal";
+  }
 }
 
 function bindEvents() {

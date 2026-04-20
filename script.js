@@ -145,10 +145,12 @@ async function loadData() {
 
   appState.currentUserId = localStorage.getItem(SESSION_KEY) || null;
 
-  // URL Cleanup: If logged in, update URL to reflect role
+  // URL Cleanup: Enforce strict path-based visibility
   const user = getCurrentUser();
-  if (user && (window.location.pathname === "/" || window.location.pathname.includes("index.html"))) {
-    window.history.replaceState(null, "", `/${user.role}`);
+  const path = window.location.pathname;
+
+  if (!user && path !== "/" && !path.includes(".html")) {
+    window.history.replaceState(null, "", "/");
   }
 
   renderAll();
@@ -247,16 +249,18 @@ function renderModules() {
   const user = getCurrentUser();
   const visibleIds = roleModules[user?.role || "guest"];
 
-  elements.moduleList.innerHTML = modules
-    .filter(m => visibleIds.includes(m.id))
-    .map(m => `
-      <button class="module-card" data-module-target="${m.id}" type="button">
-        <div class="module-icon">${m.title.charAt(0)}</div>
-        <div class="module-info">
-          <strong>${m.title}</strong>
-          <span>${m.text}</span>
-        </div>
-      </button>`).join("");
+  if (elements.moduleList) {
+    elements.moduleList.innerHTML = modules
+      .filter(m => visibleIds.includes(m.id))
+      .map(m => `
+        <button class="module-card" data-module-target="${m.id}" type="button">
+          <div class="module-icon">${m.title.charAt(0)}</div>
+          <div class="module-info">
+            <strong>${m.title}</strong>
+            <span>${m.text}</span>
+          </div>
+        </button>`).join("");
+  }
 
   const userNavLinks = document.getElementById("userNavLinks");
   if (userNavLinks) {
@@ -269,13 +273,14 @@ function renderModules() {
     }
   }
 
-  if (user?.role === "admin") {
-    elements.adminNav.innerHTML = modules.filter(m => visibleIds.includes(m.id)).map(m => `<button data-module-target="${m.id}" type="button">${m.title}</button>`).join("");
-    elements.adminNav.classList.remove("hidden");
-  } else {
-    elements.adminNav.classList.add("hidden");
+  if (elements.adminNav) {
+    if (user?.role === "admin") {
+      elements.adminNav.innerHTML = modules.filter(m => visibleIds.includes(m.id)).map(m => `<button data-module-target="${m.id}" type="button">${m.title}</button>`).join("");
+      elements.adminNav.classList.remove("hidden");
+    } else {
+      elements.adminNav.classList.add("hidden");
+    }
   }
-
   if (!appState.activeModuleId) appState.activeModuleId = user?.role === "admin" ? "userManagementSection" : (visibleIds[0] || "profileSection");
   if (!visibleIds.includes(appState.activeModuleId)) appState.activeModuleId = visibleIds[0] || "profileSection";
   setActiveModule(appState.activeModuleId);
@@ -470,28 +475,29 @@ function renderAll() {
 
   const user = getCurrentUser();
   const isAdmin = user && user.role === "admin";
-  const isUser = !!user;
+
+  // Visibility paths
+  const path = window.location.pathname;
+  const isLandingPage = path === "/" || path.includes("index.html");
+  const showDashboard = user && !isLandingPage;
 
   // Visibility Logic
-  document.getElementById("authSection").classList.toggle("hidden", isUser);
+  document.getElementById("authSection").classList.toggle("hidden", showDashboard);
+  document.querySelector(".hero-grid").classList.toggle("hidden", showDashboard);
+  document.getElementById("dashboardSection").classList.toggle("hidden", !showDashboard);
 
-  // Only Admin sees System Overview
+  // System Overview is admin-only, and only inside the dashboard
   const summarySec = document.getElementById("summarySection");
   const navOverview = document.getElementById("navOverview");
-  if (summarySec) summarySec.classList.toggle("hidden", !isAdmin);
-  if (navOverview) navOverview.classList.toggle("hidden", !isAdmin);
+  if (summarySec) summarySec.classList.toggle("hidden", !isAdmin || !showDashboard);
+  if (navOverview) navOverview.classList.toggle("hidden", !isAdmin || !showDashboard);
 
   const modSec = document.getElementById("moduleSection");
-  if (modSec) modSec.classList.toggle("hidden", !isUser || isAdmin);
+  if (modSec) modSec.classList.toggle("hidden", true); // Defunct
 
-  document.getElementById("dashboardSection").classList.toggle("hidden", !isUser);
-
-  // Invert logic: Main navbar should be visible to everyone but maybe hidden for specific states
-  // But let's hide the login/register links if user exists
+  // Hide the old login/register links if user exists
   const authNavLinks = document.getElementById("authNavLinks");
-  if (authNavLinks) authNavLinks.classList.toggle("hidden", isUser);
-
-  document.querySelector(".hero-grid").classList.toggle("hidden", isUser);
+  if (authNavLinks) authNavLinks.classList.toggle("hidden", !!user);
 
   if (elements.logoutBtn) elements.logoutBtn.classList.toggle("hidden", !user);
   if (elements.dashboardTitle) {

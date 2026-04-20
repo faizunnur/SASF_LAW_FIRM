@@ -49,15 +49,15 @@ function getStoredData() {
   if (data && data.users) {
     const adminExists = data.users.some(u => u.email === "asif@gmail.com");
     if (!adminExists) {
-      data.users.push({ 
-        id: "u-admin-asif", 
-        name: "Md. Asif Iqbal", 
-        email: "asif@gmail.com", 
-        password: "asif123", 
-        role: "admin", 
-        phone: "01887372093", 
-        department: "Admin", 
-        verified: true 
+      data.users.push({
+        id: "u-admin-asif",
+        name: "Md. Asif Iqbal",
+        email: "asif@gmail.com",
+        password: "asif123",
+        role: "admin",
+        phone: "01887372093",
+        department: "Admin",
+        verified: true
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
@@ -167,10 +167,10 @@ function wireLoginPage() {
         window.location.href = "lawyer.html";
       } else if (user.role === "admin") {
         clearLawyerDashboardSession();
-        window.location.href = "index.html#dashboardSection";
+        window.location.href = "/admin-dashboard"; // Dedicated path for admin that triggers index.html fallback
       } else {
         clearLawyerDashboardSession();
-        window.location.href = "index.html#summarySection";
+        window.location.href = "/client"; // Points directly to the client dashboard
       }
     }, 700);
   });
@@ -213,7 +213,7 @@ function wireRegisterPage() {
 
     data.users.push(user);
     addNotification(data, "u-admin", "Profile Verifying Notification", `${user.name} registered and needs profile verification.`);
-    
+
     await syncToCloud(data);
 
     showMessage(feedback, "Registration complete. Redirecting to login...", "success");

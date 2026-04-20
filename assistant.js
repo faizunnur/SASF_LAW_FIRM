@@ -21,23 +21,23 @@ function initElements() {
     mobileMenuToggle: document.getElementById("mobileMenuToggle"),
     sidebar: document.getElementById("sidebar"),
     toast: document.getElementById("toast"),
-    
+
     statTotalCases: document.getElementById("statTotalCases"),
     statPendingAppts: document.getElementById("statPendingAppts"),
     statTotalDocs: document.getElementById("statTotalDocs"),
-    
+
     recentActivityList: document.getElementById("recentActivityList"),
     caseTableBody: document.getElementById("caseTableBody"),
     documentTableBody: document.getElementById("documentTableBody"),
     appointmentTableBody: document.getElementById("appointmentTableBody"),
     lawyerTableBody: document.getElementById("lawyerTableBody"),
-    
+
     caseModal: document.getElementById("caseModal"),
     docModal: document.getElementById("docModal"),
     caseForm: document.getElementById("caseForm"),
     docForm: document.getElementById("docForm"),
     lawyerSelect: document.getElementById("lawyerSelect"),
-    
+
     topSearchInput: document.getElementById("topSearchInput")
   };
 }
@@ -96,19 +96,19 @@ async function loadData() {
     const saved = localStorage.getItem(STORAGE_KEY);
     appState.data = saved ? JSON.parse(saved) : seedDemoData();
   }
-  
+
   appState.currentUserId = localStorage.getItem(SESSION_KEY);
   if (!appState.currentUserId) {
     window.location.href = "login.html";
     return;
   }
-  
+
   const user = getCurrentUser();
   if (!user || user.role !== "assistant") {
     window.location.href = "index.html";
     return;
   }
-  
+
 
   //renderAll(); // Moved to init sequence
 }
@@ -279,12 +279,12 @@ function renderAppointments() {
 function renderLawyers() {
   const query = els.topSearchInput.value.toLowerCase();
   const lawyers = appState.data.users.filter(u => u.role === "lawyer" && (
-    u.name.toLowerCase().includes(query) || 
-    u.department.toLowerCase().includes(query) || 
+    u.name.toLowerCase().includes(query) ||
+    u.department.toLowerCase().includes(query) ||
     u.email.toLowerCase().includes(query)
   ));
 
-  els.lawyerTableBody.innerHTML = lawyers.length > 0 
+  els.lawyerTableBody.innerHTML = lawyers.length > 0
     ? lawyers.map(l => `
         <tr>
           <td><strong>${l.name}</strong></td>
@@ -299,11 +299,11 @@ function renderLawyers() {
 
 function handleTopSearch() {
   const query = els.topSearchInput.value.toLowerCase();
-  
+
   if (appState.activeSection === "cases") {
-    const results = appState.data.cases.filter(c => 
-      c.id.toLowerCase().includes(query) || 
-      c.title.toLowerCase().includes(query) || 
+    const results = appState.data.cases.filter(c =>
+      c.id.toLowerCase().includes(query) ||
+      c.title.toLowerCase().includes(query) ||
       c.client.toLowerCase().includes(query)
     );
     els.caseTableBody.innerHTML = results.map(c => `
@@ -322,9 +322,9 @@ function handleTopSearch() {
       </tr>
     `).join("");
   } else if (appState.activeSection === "documents") {
-    const results = appState.data.documents.filter(d => 
-      d.id.toLowerCase().includes(query) || 
-      d.name.toLowerCase().includes(query) || 
+    const results = appState.data.documents.filter(d =>
+      d.id.toLowerCase().includes(query) ||
+      d.name.toLowerCase().includes(query) ||
       d.category.toLowerCase().includes(query)
     );
     els.documentTableBody.innerHTML = results.map(d => `
@@ -392,7 +392,7 @@ function renderAll() {
   renderDocuments();
   renderAppointments();
   renderLawyers();
-  
+
   // Populate lawyer select
   const lawyers = appState.data.users.filter(u => u.role === "lawyer");
   els.lawyerSelect.innerHTML = lawyers.map(l => `<option value="${l.id}">${l.name} (${l.department})</option>`).join("");
@@ -407,10 +407,10 @@ function bindEvents() {
       const section = item.dataset.section;
       els.navItems.forEach(i => i.classList.remove("active"));
       item.classList.add("active");
-      
+
       els.sections.forEach(s => s.classList.remove("active"));
       document.getElementById(section).classList.add("active");
-      
+
       els.pageTitle.textContent = item.querySelector(".nav-text").textContent + " Overview";
       appState.activeSection = section;
 
@@ -430,10 +430,10 @@ function bindEvents() {
 
   // Close sidebar when clicking outside on mobile
   document.addEventListener("click", (e) => {
-    if (window.innerWidth <= 768 && 
-        !els.sidebar.contains(e.target) && 
-        !els.mobileMenuToggle.contains(e.target) && 
-        els.sidebar.classList.contains("open")) {
+    if (window.innerWidth <= 768 &&
+      !els.sidebar.contains(e.target) &&
+      !els.mobileMenuToggle.contains(e.target) &&
+      els.sidebar.classList.contains("open")) {
       els.sidebar.classList.remove("open");
     }
   });
@@ -534,7 +534,7 @@ function bindEvents() {
   els.caseTableBody.addEventListener("click", (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
-    
+
     const id = btn.dataset.id;
     if (btn.classList.contains("edit-case")) {
       const c = appState.data.cases.find(x => x.id === id);
@@ -564,7 +564,7 @@ function bindEvents() {
   els.documentTableBody.addEventListener("click", (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
-    
+
     const id = btn.dataset.id;
     if (btn.classList.contains("edit-doc")) {
       const d = appState.data.documents.find(x => x.id === id);
@@ -593,13 +593,34 @@ function bindEvents() {
       const appt = appState.data.appointments.find(x => x.id === id);
       appt.payment = "Paid";
       appt.status = "Confirmed";
-      
+
+      // Automatically create a Case if it's a new consultation
+      const existingCase = appState.data.cases.find(c => c.clientId === appt.clientId && c.type === appt.type);
+      if (!existingCase) {
+        const newCaseId = generateId("C");
+        const clientUser = appState.data.users.find(u => u.id === appt.clientId);
+        appState.data.cases.push({
+          id: newCaseId,
+          title: `${appt.type} Matter - ${clientUser ? clientUser.name : 'New Client'}`,
+          client: clientUser ? clientUser.name : 'Client',
+          clientId: appt.clientId,
+          lawyerId: appt.lawyerId || "u-lawyer",
+          assistantId: appState.currentUserId,
+          type: appt.type,
+          priority: "Medium",
+          status: "In Progress",
+          hearingDate: appt.date,
+          notes: `Created automatically from confirmed ${appt.type} appointment.`
+        });
+        addNotification(appt.clientId, "New Case Opened", `A new case ${newCaseId} has been opened for your ${appt.type} matter.`);
+      }
+
       addNotification(appt.clientId, "Appointment Confirmed", `Your appointment on ${appt.date} is confirmed.`);
       addNotification(appt.lawyerId, "Appointment Schedule Update", `New confirmed appointment for ${appt.date}.`);
-      
+
       saveData();
       renderAll();
-      showToast("Payment verified and appointment confirmed.");
+      showToast("Payment verified, case created, and appointment confirmed.");
     }
   });
 

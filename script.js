@@ -6,14 +6,16 @@ const LAWYER_NAME_KEY = "lawyer_name";
 
 const modules = [
   { id: "profileSection", title: "Profile", text: "View and manage user profile information." },
-  { id: "notificationSection", title: "Notifications", text: "Stay updated with system alerts and reminders." },
+  { id: "notificationSection", title: "Inbox", text: "Messages and alerts regarding your cases." },
+  { id: "appointmentSection", title: "Book Appointment", text: "Schedule a consultation with our legal team." },
+  { id: "clientCaseSection", title: "Case Status", text: "Track your active cases and manage documents." },
   { id: "userManagementSection", title: "User Management", text: "Assign roles, update permissions, and manage all users." },
   { id: "reportSection", title: "Report Generation", text: "Generate detailed system, transaction, and activity summaries." }
 ];
 
 const roleModules = {
   guest: [],
-  client: ["profileSection", "notificationSection"],
+  client: ["profileSection", "notificationSection", "appointmentSection", "clientCaseSection"],
   lawyer: ["profileSection", "notificationSection"],
   assistant: ["profileSection", "notificationSection"],
   admin: ["profileSection", "notificationSection", "userManagementSection", "reportSection"]
@@ -103,7 +105,7 @@ async function loadData() {
   try {
     const res = await fetch("/api/load");
     const cloudData = await res.json();
-    
+
     if (cloudData) {
       appState.data = cloudData;
     } else {
@@ -115,17 +117,17 @@ async function loadData() {
     const saved = localStorage.getItem(STORAGE_KEY);
     appState.data = saved ? JSON.parse(saved) : seedDemoData();
   }
-  
+
   if (appState.data && appState.data.users) {
     const adminIndex = appState.data.users.findIndex(u => u.email === "asif@gmail.com");
-    const adminUser = { 
-      id: "u-admin-asif", 
-      name: "Md. Asif Iqbal", 
-      email: "asif@gmail.com", 
-      password: "asif123", 
-      role: "admin", 
-      phone: "01887372093", 
-      department: "Admin", 
+    const adminUser = {
+      id: "u-admin-asif",
+      name: "Md. Asif Iqbal",
+      email: "asif@gmail.com",
+      password: "asif123",
+      role: "admin",
+      phone: "01887372093",
+      department: "Admin",
       verified: true,
       status: "active"
     };
@@ -142,11 +144,18 @@ async function loadData() {
 
 
   appState.currentUserId = localStorage.getItem(SESSION_KEY) || null;
+
+  // URL Cleanup: If logged in, update URL to reflect role
+  const user = getCurrentUser();
+  if (user && window.location.pathname === "/") {
+    window.history.pushState(null, "", `/${user.role}`);
+  }
+
   renderAll();
 }
 
-async function saveData() { 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState.data)); 
+async function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState.data));
   try {
     await fetch("/api/save", {
       method: "POST",
@@ -200,7 +209,7 @@ function addNotification(userId, title, message) {
 }
 
 function renderStats() {
-  const stats = [ { label: "Total Users", value: appState.data.users.length }, { label: "Active Sessions", value: appState.currentUserId ? 1 : 0 } ];
+  const stats = [{ label: "Total Users", value: appState.data.users.length }, { label: "Active Sessions", value: appState.currentUserId ? 1 : 0 }];
   elements.statsGrid.innerHTML = stats.map((item) => `<article class="mini-card"><h3>${item.value}</h3><p>${item.label}</p></article>`).join("");
 }
 
@@ -210,7 +219,11 @@ function renderUserBanner() {
     elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>No active user</h3><p>Login or create a new account.</p></div><span class="role-badge">Guest</span>`;
     return;
   }
-  elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} - ${titleCase(user.role)} - ${user.department}</p></div><span class="role-badge">${titleCase(user.role)}</span>`;
+  elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} - ${titleCase(user.role)} - ${user.department}</p></div><span class="role-badge" data-role="${user.role}">${titleCase(user.role)}</span>`;
+
+  if (elements.dashboardTitle) {
+    elements.dashboardTitle.textContent = `Welcome back, ${user.name.split(" ")[0]}!`;
+  }
 }
 
 function renderBackendStatus() {
@@ -237,13 +250,25 @@ async function fetchBackendStatus() {
 function renderModules() {
   const user = getCurrentUser();
   const visibleIds = roleModules[user?.role || "guest"];
-  elements.moduleList.innerHTML = modules.filter(m => visibleIds.includes(m.id)).map(m => `<button data-module-target="${m.id}" type="button"><strong>${m.title}</strong><span>${m.text}</span></button>`).join("");
+
+  elements.moduleList.innerHTML = modules
+    .filter(m => visibleIds.includes(m.id))
+    .map(m => `
+      <button class="module-card" data-module-target="${m.id}" type="button">
+        <div class="module-icon">${m.title.charAt(0)}</div>
+        <div class="module-info">
+          <strong>${m.title}</strong>
+          <span>${m.text}</span>
+        </div>
+      </button>`).join("");
+
   if (user?.role === "admin") {
     elements.adminNav.innerHTML = modules.filter(m => visibleIds.includes(m.id)).map(m => `<button data-module-target="${m.id}" type="button">${m.title}</button>`).join("");
     elements.adminNav.classList.remove("hidden");
   } else {
     elements.adminNav.classList.add("hidden");
   }
+
   if (!appState.activeModuleId) appState.activeModuleId = user?.role === "admin" ? "userManagementSection" : (visibleIds[0] || "profileSection");
   if (!visibleIds.includes(appState.activeModuleId)) appState.activeModuleId = visibleIds[0] || "profileSection";
   setActiveModule(appState.activeModuleId);
@@ -269,7 +294,7 @@ function renderProfileForm() {
 
   const initials = user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   const ro = user.role === "client" ? "readonly" : "";
-  
+
   elements.profileForm.innerHTML = `
     <div class="profile-redesign-container">
       <div class="profile-summary-side">
@@ -361,13 +386,13 @@ function generateDetailsReport() {
   const range = elements.reportRangeSelect.value;
   const users = appState.data.users;
   const cases = appState.data.cases || [];
-  
+
   const activeCount = users.filter(u => u.status !== "blocked").length;
   const blockedCount = users.length - activeCount;
-  
+
   const openCases = cases.filter(c => c.status === "open").length;
   const closedCases = cases.filter(c => c.status === "closed").length;
-  
+
   elements.reportTitle.textContent = `Details Report - ${titleCase(range)}`;
   elements.reportOutputBox.classList.remove("hidden");
   elements.reportOutputText.innerHTML = `
@@ -391,13 +416,13 @@ function generateDetailsReport() {
 function generateTransactionReport() {
   const range = elements.reportRangeSelect.value;
   const txs = appState.data.transactions || [];
-  
+
   const totalRevenue = txs.reduce((sum, tx) => tx.status === "Confirmed" ? sum + tx.amount : sum, 0);
   const pendingRev = txs.reduce((sum, tx) => tx.status === "Pending" ? sum + tx.amount : sum, 0);
-  
+
   elements.reportTitle.textContent = `Transaction Report - ${titleCase(range)}`;
   elements.reportOutputBox.classList.remove("hidden");
-  
+
   let tableRows = txs.map(tx => `
     <tr>
       <td>${tx.id}</td>
@@ -427,18 +452,40 @@ function generateTransactionReport() {
 }
 
 function renderAll() {
-  renderStats(); renderBackendStatus(); renderUserBanner(); renderModules(); renderProfileForm(); renderNotifications(); renderUserManagementForm(); renderUserTable();
+  renderStats();
+  renderBackendStatus();
+  renderUserBanner();
+  renderModules();
+  renderProfileForm();
+  renderNotifications();
+  renderUserManagementForm();
+  renderUserTable();
+
   const user = getCurrentUser();
   const isAdmin = user && user.role === "admin";
   const isUser = !!user;
+
+  // Visibility Logic
   document.getElementById("authSection").classList.toggle("hidden", isUser);
-  document.getElementById("summarySection").classList.toggle("hidden", isAdmin);
+
+  // Only Admin sees System Overview
+  const summarySec = document.getElementById("summarySection");
+  const navOverview = document.getElementById("navOverview");
+  if (summarySec) summarySec.classList.toggle("hidden", !isAdmin);
+  if (navOverview) navOverview.classList.toggle("hidden", !isAdmin);
+
   document.getElementById("moduleSection").classList.toggle("hidden", !isUser || isAdmin);
   document.getElementById("dashboardSection").classList.toggle("hidden", !isUser);
-  document.querySelector(".main-navbar").classList.toggle("hidden", isAdmin);
+
+  // Invert logic: Main navbar should be visible to everyone but maybe hidden for specific states
+  // But let's hide the login/register links if user exists
+  const authNavLinks = document.getElementById("authNavLinks");
+  if (authNavLinks) authNavLinks.classList.toggle("hidden", isUser);
+
   document.querySelector(".hero-grid").classList.toggle("hidden", isUser);
+
   if (elements.logoutBtn) elements.logoutBtn.classList.toggle("hidden", !user);
-  elements.dashboardTitle.textContent = user ? `${titleCase(user.role)} Dashboard` : "Law Firm Portal";
+  elements.dashboardTitle.textContent = user ? `${titleCase(user.role)} Portal` : "Law Firm Portal";
 }
 
 function bindEvents() {
@@ -498,7 +545,12 @@ function bindEvents() {
   if (elements.logoutBtn) {
     elements.logoutBtn.addEventListener("click", () => {
       clearLawyerDashboardSession();
-      appState.currentUserId = null; appState.activeModuleId = null; saveSession(); renderAll(); showToast("Signed out.");
+      appState.currentUserId = null;
+      appState.activeModuleId = null;
+      saveSession();
+      window.history.pushState(null, "", "/");
+      renderAll();
+      showToast("Signed out.");
     });
   }
 

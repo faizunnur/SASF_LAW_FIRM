@@ -37,7 +37,6 @@ const elements = {
   registerForm: document.getElementById("registerForm"),
   recoverForm: document.getElementById("recoverForm"),
   logoutBtn: document.getElementById("logoutBtn"),
-  loadDemoBtn: document.getElementById("loadDemoBtn"),
   statsGrid: document.getElementById("statsGrid"),
   backendStatusBox: document.getElementById("backendStatusBox"),
   userBanner: document.getElementById("userBanner"),
@@ -68,16 +67,26 @@ function seedDemoData() {
       { id: "u-assistant", name: "Imran Hossain", email: "assistant@lexbridge.com", password: "123456", role: "assistant", phone: "+880 1700-333333", department: "Case Operations", verified: true, status: "active" },
       { id: "u-client", name: "Sadia Karim", email: "client@lexbridge.com", password: "123456", role: "client", phone: "+880 1700-444444", department: "Client", verified: true, status: "active" }
     ],
+    cases: [
+      { id: "C-1024", title: "Property Dispute Review", client: "Sadia Karim", clientId: "u-client", lawyerId: "u-lawyer", assistantId: "u-assistant", type: "Civil", priority: "High", status: "In Progress", hearingDate: "2026-04-18", notes: "Evidence checklist updated and hearing prepared." },
+      { id: "C-1025", title: "Startup Incorporation", client: "Sadia Karim", clientId: "u-client", lawyerId: "u-lawyer", assistantId: "u-assistant", type: "Corporate", priority: "Medium", status: "Review", hearingDate: "2026-04-22", notes: "Draft legal structure prepared for approval." },
+      { id: "C-1026", title: "Family Law #201", client: "Sadia Karim", clientId: "u-client", lawyerId: "u-lawyer", assistantId: "u-assistant", type: "Family", priority: "Low", status: "In Progress" }
+    ],
+    appointments: [
+      { id: "A-501", clientId: "u-client", lawyerId: "u-lawyer", assistantId: "u-assistant", date: "2026-04-12", time: "11:00", type: "Consultation", status: "Confirmed", payment: "Paid" }
+    ],
+    schedules: [
+      { id: "S-81", lawyerId: "u-lawyer", title: "Court Hearing: Property Dispute Review", date: "2026-04-18", time: "09:30", category: "Court Date", reminder: "Enabled" },
+      { id: "S-82", lawyerId: "u-lawyer", title: "Client Consultation", date: "2026-04-12", time: "11:00", category: "Appointment", reminder: "Enabled" }
+    ],
+    documents: [
+      { id: "D-900", caseId: "C-1024", ownerId: "u-lawyer", clientId: "u-client", name: "Land Ownership Evidence.pdf", category: "Evidence", updatedOn: "2026-04-02", access: "Client View" }
+    ],
     notifications: [
       { id: "N-1", userId: "u-client", title: "Payment Confirmation Notification", message: "Your appointment payment was confirmed successfully.", date: "2026-04-03" },
       { id: "N-2", userId: "u-lawyer", title: "Hearing Date Notification", message: "Property dispute hearing scheduled for 18 April 2026.", date: "2026-04-03" },
       { id: "N-3", userId: "u-assistant", title: "Take Appointment Notification", message: "A client requested a new consultation appointment.", date: "2026-04-03" },
       { id: "N-4", userId: "u-admin", title: "Profile Verifying Notification", message: "A new account requires verification review.", date: "2026-04-03" }
-    ],
-    cases: [
-      { id: "C-1", status: "open", title: "Property Dispute #102", client: "Sadia Karim" },
-      { id: "C-2", status: "closed", title: "Contract Review #99", client: "Imran Hossain" },
-      { id: "C-3", status: "open", title: "Family Law #201", client: "Sadia Karim" }
     ],
     transactions: [
       { id: "TX-781", client: "Sadia Karim", amount: 250, status: "Confirmed", date: "2026-04-01" },
@@ -402,11 +411,12 @@ function renderAll() {
   renderStats(); renderBackendStatus(); renderUserBanner(); renderModules(); renderProfileForm(); renderNotifications(); renderUserManagementForm(); renderUserTable();
   const user = getCurrentUser();
   const isAdmin = user && user.role === "admin";
-  document.getElementById("authSection").classList.toggle("hidden", isAdmin);
+  const isUser = !!user;
+  document.getElementById("authSection").classList.toggle("hidden", isUser);
   document.getElementById("summarySection").classList.toggle("hidden", isAdmin);
   document.getElementById("moduleSection").classList.toggle("hidden", isAdmin);
   document.querySelector(".main-navbar").classList.toggle("hidden", isAdmin);
-  document.querySelector(".hero-grid").classList.toggle("hidden", isAdmin);
+  document.querySelector(".hero-grid").classList.toggle("hidden", isUser);
   if (elements.logoutBtn) elements.logoutBtn.classList.toggle("hidden", !user);
   elements.dashboardTitle.textContent = user ? `${titleCase(user.role)} Dashboard` : "Law Firm Portal";
 }

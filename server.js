@@ -51,6 +51,14 @@ app.post("/api/save", async (req, res) => {
   }
 });
 
+app.get("/assistant", (_req, res) => {
+  res.sendFile(path.join(rootDir, "assistant-gate.html"));
+});
+
+app.get("/admin", (_req, res) => {
+  res.sendFile(path.join(rootDir, "admin-gate.html"));
+});
+
 app.use((_req, res) => {
   res.sendFile(path.join(rootDir, "index.html"));
 });

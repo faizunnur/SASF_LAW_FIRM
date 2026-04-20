@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistant Portal | SASF LAW FIRM</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .gate-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 10px;
+    }
+    .gate-tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #64748b;
+      transition: all 0.2s;
+    }
+    .gate-tab.active {
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+    }
+    .gate-form-section {
+      display: none;
+    }
+    .gate-form-section.active {
+      display: block;
+    }
+  </style>
+</head>
+<body class="auth-page-body">
+  <main class="auth-page-shell">
+    <section class="auth-page-card auth-page-card-wide">
+      <a class="auth-back-link" href="index.html">← Back to home</a>
+      
+      <div class="registration-header-bar" style="margin-top: 20px; background: linear-gradient(135deg, #1f4e79 0%, #163754 100%);">Assistant Onboarding Portal</div>
+      
+      <p class="auth-page-text" style="margin-bottom: 25px;">Welcome to the SASF legal team. Register or sign in to access your administrative dashboard.</p>
+
+      <div class="gate-tabs">
+        <div class="gate-tab active" onclick="switchGateTab('gate-login')">Sign In</div>
+        <div class="gate-tab" onclick="switchGateTab('gate-register')">Register as Assistant</div>
+      </div>
+
+      <!-- Login Section -->
+      <div id="gate-login" class="gate-form-section active">
+        <form id="loginPageForm" class="branded-registration-form">
+          <div class="form-row-full">
+            <label><span>Email Address</span><input type="email" name="email" placeholder="Enter your email" required></label>
+          </div>
+          <div class="form-row-full">
+            <label><span>Password</span><input type="password" name="password" placeholder="Enter your password" required></label>
+          </div>
+          <button class="primary-btn branded-submit-btn" type="submit">Sign In to Dashboard</button>
+        </form>
+      </div>
+
+      <!-- Register Section -->
+      <div id="gate-register" class="gate-form-section">
+        <form id="registerPageForm" class="branded-registration-form">
+          <input type="hidden" name="role" value="assistant">
+          <div class="form-row-2col">
+            <label><span>Full Name</span><input type="text" name="name" placeholder="Full name" required></label>
+            <label><span>Phone Number</span><input type="text" name="phone" placeholder="Phone number" required></label>
+          </div>
+          <div class="form-row-full">
+            <label><span>Email Address</span><input type="email" name="email" placeholder="Work email address" required></label>
+          </div>
+          <div class="form-row-full">
+            <label><span>Create Password</span><input type="password" name="password" placeholder="Create password" required></label>
+          </div>
+          <div class="form-row-full">
+            <label><span>Department/Unit</span><input type="text" name="department" value="Case Operations" required></label>
+          </div>
+          <div class="form-row-full">
+            <label><span>Assigned Role</span><input type="text" value="Assistant" readonly class="readonly-input"></label>
+          </div>
+          <button class="primary-btn branded-submit-btn" type="submit">Complete Assistant Registration</button>
+        </form>
+      </div>
+
+      <p class="auth-feedback" id="authFeedback" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script>
+    function switchGateTab(tabId) {
+      document.querySelectorAll('.gate-tab').forEach(t => {
+        t.classList.toggle('active', t.getAttribute('onclick').includes(tabId));
+      });
+      document.querySelectorAll('.gate-form-section').forEach(s => {
+        s.classList.toggle('active', s.id === tabId);
+      });
+      document.getElementById('authFeedback').textContent = '';
+    }
+  </script>
+</body>
+</html>

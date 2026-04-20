@@ -7,40 +7,40 @@ const appState = {
   activeSection: "dashboard"
 };
 
-// UI Elements
-const els = {
-  navItems: document.querySelectorAll(".nav-item"),
-  sections: document.querySelectorAll(".module-section"),
-  pageTitle: document.getElementById("pageTitle"),
-  pageSubtitle: document.getElementById("pageSubtitle"),
-  userBanner: document.getElementById("userBanner"),
-  logoutBtn: document.getElementById("logoutBtn"),
-  toast: document.getElementById("toast"),
-  
-  // Stats
-  statTotalCases: document.getElementById("statTotalCases"),
-  statPendingAppts: document.getElementById("statPendingAppts"),
-  statTotalDocs: document.getElementById("statTotalDocs"),
-  
-  // Lists/Tables
-  recentActivityList: document.getElementById("recentActivityList"),
-  caseTableBody: document.getElementById("caseTableBody"),
-  documentTableBody: document.getElementById("documentTableBody"),
-  appointmentTableBody: document.getElementById("appointmentTableBody"),
-  searchTableBody: document.getElementById("searchTableBody"),
-  
-  // Modals
-  caseModal: document.getElementById("caseModal"),
-  docModal: document.getElementById("docModal"),
-  caseForm: document.getElementById("caseForm"),
-  docForm: document.getElementById("docForm"),
-  lawyerSelect: document.getElementById("lawyerSelect"),
-  
-  // Search
-  globalSearchInput: document.getElementById("globalSearchInput"),
-  filterCaseType: document.getElementById("filterCaseType"),
-  filterPriority: document.getElementById("filterPriority")
-};
+// UI Elements (populated in init)
+let els = {};
+
+function initElements() {
+  els = {
+    navItems: document.querySelectorAll(".nav-item"),
+    sections: document.querySelectorAll(".module-section"),
+    pageTitle: document.getElementById("pageTitle"),
+    pageSubtitle: document.getElementById("pageSubtitle"),
+    userBanner: document.getElementById("userBanner"),
+    logoutBtn: document.getElementById("logoutBtn"),
+    mobileMenuToggle: document.getElementById("mobileMenuToggle"),
+    sidebar: document.getElementById("sidebar"),
+    toast: document.getElementById("toast"),
+    
+    statTotalCases: document.getElementById("statTotalCases"),
+    statPendingAppts: document.getElementById("statPendingAppts"),
+    statTotalDocs: document.getElementById("statTotalDocs"),
+    
+    recentActivityList: document.getElementById("recentActivityList"),
+    caseTableBody: document.getElementById("caseTableBody"),
+    documentTableBody: document.getElementById("documentTableBody"),
+    appointmentTableBody: document.getElementById("appointmentTableBody"),
+    lawyerTableBody: document.getElementById("lawyerTableBody"),
+    
+    caseModal: document.getElementById("caseModal"),
+    docModal: document.getElementById("docModal"),
+    caseForm: document.getElementById("caseForm"),
+    docForm: document.getElementById("docForm"),
+    lawyerSelect: document.getElementById("lawyerSelect"),
+    
+    topSearchInput: document.getElementById("topSearchInput")
+  };
+}
 
 // --- Data Core ---
 
@@ -101,7 +101,8 @@ async function loadData() {
     return;
   }
   
-  renderAll();
+
+  //renderAll(); // Moved to init sequence
 }
 
 async function saveData() {
@@ -166,18 +167,54 @@ function renderStats() {
 }
 
 function renderRecentActivity() {
-  const activities = appState.data.notifications.slice(0, 5);
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const myCases = appState.data.cases.filter(c => c.assistantId === user.id);
+  const myCaseIds = myCases.map(c => c.id);
+  const myDocs = appState.data.documents.filter(d => myCaseIds.includes(d.caseId));
+  const myAppts = appState.data.appointments.filter(a => a.assistantId === user.id);
+
+  // Map to a unified activity format
+  const activities = [
+    ...myCases.map(c => ({
+      type: "Case",
+      title: `Managed Case: ${c.title}`,
+      message: `Status: ${c.status} | Client: ${c.client}`,
+      date: c.hearingDate || "Recent",
+      badge: "badge-blue"
+    })),
+    ...myDocs.map(d => ({
+      type: "Doc",
+      title: `Case Document: ${d.name}`,
+      message: `Attached to Case ${d.caseId} | Category: ${d.category}`,
+      date: d.updatedOn || "Recent",
+      badge: "badge-gray"
+    })),
+    ...myAppts.map(a => ({
+      type: "Appt",
+      title: `Appointment Request: ${a.type}`,
+      message: `Client: ${appState.data.users.find(u => u.id === a.clientId)?.name || "Client"} | Status: ${a.status}`,
+      date: a.date,
+      badge: a.status === "Pending" ? "badge-orange" : "badge-green"
+    }))
+  ];
+
+  // Sort by date (descending)
+  activities.sort((a, b) => b.date.localeCompare(a.date));
+
   els.recentActivityList.innerHTML = activities.length > 0
-    ? activities.map(a => `
-        <div class="entry-card" style="margin-bottom:10px;">
+    ? activities.slice(0, 8).map(a => `
+        <div class="entry-card" style="margin-bottom:12px; border-left: 4px solid var(--primary);">
           <div class="entry-row">
+            <span class="badge ${a.badge}" style="margin-right: 8px;">${a.type}</span>
             <strong>${a.title}</strong>
             <span class="meta">${a.date}</span>
           </div>
-          <p>${a.message}</p>
+          <p style="margin-top: 5px; font-size: 13px; color: #475569;">${a.message}</p>
         </div>
       `).join("")
-    : '<div class="empty-state">No recent activities found.</div>';
+    : '<div class="empty-state">No relevant activity for your portfolio yet.</div>';
 }
 
 function renderCases() {
@@ -231,34 +268,92 @@ function renderAppointments() {
   `).join("");
 }
 
-function renderSearch() {
-  const query = els.globalSearchInput.value.toLowerCase();
-  const typeFilter = els.filterCaseType.value;
-  const priorityFilter = els.filterPriority.value;
+function renderLawyers() {
+  const query = els.topSearchInput.value.toLowerCase();
+  const lawyers = appState.data.users.filter(u => u.role === "lawyer" && (
+    u.name.toLowerCase().includes(query) || 
+    u.department.toLowerCase().includes(query) || 
+    u.email.toLowerCase().includes(query)
+  ));
+
+  els.lawyerTableBody.innerHTML = lawyers.length > 0 
+    ? lawyers.map(l => `
+        <tr>
+          <td><strong>${l.name}</strong></td>
+          <td><span class="badge badge-gray">${l.department}</span></td>
+          <td>${l.email}</td>
+          <td>${l.phone || "---"}</td>
+          <td><span class="badge badge-green">Online</span></td>
+        </tr>
+      `).join("")
+    : '<tr><td colspan="5" class="empty-cell" style="text-align:center; padding:40px; color:#94a3b8;">No lawyers found matching your search.</td></tr>';
+}
+
+function handleTopSearch() {
+  const query = els.topSearchInput.value.toLowerCase();
   
-  const results = appState.data.cases.filter(c => {
-    const matchesQuery = c.id.toLowerCase().includes(query) || 
-                         c.title.toLowerCase().includes(query) || 
-                         c.client.toLowerCase().includes(query);
-    const matchesType = !typeFilter || c.type === typeFilter;
-    const matchesPriority = !priorityFilter || c.priority === priorityFilter;
-    
-    return matchesQuery && matchesType && matchesPriority;
-  });
-  
-  els.searchTableBody.innerHTML = results.map(c => `
-    <tr>
-      <td>${c.id}</td>
-      <td><strong>${c.title}</strong></td>
-      <td>${c.client}</td>
-      <td>${appState.data.users.find(u => u.id === c.lawyerId)?.name || "Unassigned"}</td>
-      <td><span class="badge ${getPriorityBadgeClass(c.priority)}">${c.priority}</span></td>
-      <td><span class="badge ${getStatusBadgeClass(c.status)}">${c.status}</span></td>
-    </tr>
-  `).join("");
-  
-  if (results.length === 0) {
-    els.searchTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:#64748b;">No cases matching your search criteria.</td></tr>';
+  if (appState.activeSection === "cases") {
+    const results = appState.data.cases.filter(c => 
+      c.id.toLowerCase().includes(query) || 
+      c.title.toLowerCase().includes(query) || 
+      c.client.toLowerCase().includes(query)
+    );
+    els.caseTableBody.innerHTML = results.map(c => `
+      <tr>
+        <td><strong>${c.id}</strong></td>
+        <td>${c.title}</td>
+        <td>${c.client}</td>
+        <td>${appState.data.users.find(u => u.id === c.lawyerId)?.name || "Unassigned"}</td>
+        <td><span class="badge ${getStatusBadgeClass(c.status)}">${c.status}</span></td>
+        <td>
+          <div class="action-btns">
+            <button class="icon-btn edit-case" data-id="${c.id}" title="Edit">✏️</button>
+            <button class="icon-btn delete-case" data-id="${c.id}" title="Delete">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  } else if (appState.activeSection === "documents") {
+    const results = appState.data.documents.filter(d => 
+      d.id.toLowerCase().includes(query) || 
+      d.name.toLowerCase().includes(query) || 
+      d.category.toLowerCase().includes(query)
+    );
+    els.documentTableBody.innerHTML = results.map(d => `
+      <tr>
+        <td>${d.id}</td>
+        <td><strong>${d.name}</strong></td>
+        <td><span class="badge badge-gray">${d.category}</span></td>
+        <td>${d.updatedOn || "N/A"}</td>
+        <td>
+          <div class="action-btns">
+            <button class="icon-btn edit-doc" data-id="${d.id}">✏️</button>
+            <button class="icon-btn delete-doc" data-id="${d.id}">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join("");
+  } else if (appState.activeSection === "lawyers") {
+    renderLawyers();
+  } else if (appState.activeSection === "appointments") {
+    // Basic filter for appointments
+    const results = appState.data.appointments.filter(a => {
+      const clientName = appState.data.users.find(u => u.id === a.clientId)?.name || "";
+      return clientName.toLowerCase().includes(query) || a.type.toLowerCase().includes(query);
+    });
+    els.appointmentTableBody.innerHTML = results.map(a => `
+      <tr>
+        <td><strong>${a.date}</strong><br><small>${a.time}</small></td>
+        <td>${appState.data.users.find(u => u.id === a.clientId)?.name || "Client"}</td>
+        <td>${a.type}</td>
+        <td><span class="badge ${a.payment === "Paid" ? "badge-green" : "badge-orange"}">${a.payment || "Pending"}</span></td>
+        <td>
+          <div class="action-btns">
+            ${a.status === "Pending" ? `<button class="primary-btn-sm confirm-appt" data-id="${a.id}">Verify & Confirm</button>` : `<span class="badge badge-green">Confirmed</span>`}
+          </div>
+        </td>
+      </tr>
+    `).join("");
   }
 }
 
@@ -288,7 +383,7 @@ function renderAll() {
   renderCases();
   renderDocuments();
   renderAppointments();
-  renderSearch();
+  renderLawyers();
   
   // Populate lawyer select
   const lawyers = appState.data.users.filter(u => u.role === "lawyer");
@@ -310,7 +405,29 @@ function bindEvents() {
       
       els.pageTitle.textContent = item.querySelector(".nav-text").textContent + " Overview";
       appState.activeSection = section;
+
+      // Close sidebar on mobile after navigation
+      if (window.innerWidth <= 768) {
+        els.sidebar.classList.remove("open");
+      }
     });
+  });
+
+  // Mobile Menu Toggle
+  if (els.mobileMenuToggle) {
+    els.mobileMenuToggle.addEventListener("click", () => {
+      els.sidebar.classList.toggle("open");
+    });
+  }
+
+  // Close sidebar when clicking outside on mobile
+  document.addEventListener("click", (e) => {
+    if (window.innerWidth <= 768 && 
+        !els.sidebar.contains(e.target) && 
+        !els.mobileMenuToggle.contains(e.target) && 
+        els.sidebar.classList.contains("open")) {
+      els.sidebar.classList.remove("open");
+    }
   });
 
   // Logout
@@ -354,7 +471,8 @@ function bindEvents() {
       priority: fd.get("priority"),
       status: fd.get("status"),
       hearingDate: fd.get("hearingDate"),
-      notes: fd.get("notes")
+      notes: fd.get("notes"),
+      assistantId: appState.currentUserId // Automatically assign to current assistant
     };
 
     if (id) {
@@ -478,12 +596,19 @@ function bindEvents() {
   });
 
   // Search & Filter
-  els.globalSearchInput.addEventListener("input", renderSearch);
-  els.filterCaseType.addEventListener("change", renderSearch);
-  els.filterPriority.addEventListener("change", renderSearch);
+  els.topSearchInput.addEventListener("input", () => {
+    if (appState.activeSection === "dashboard") {
+      // If typing on dashboard, switch to cases for better visibility of results
+      const casesNavItem = Array.from(els.navItems).find(n => n.dataset.section === "cases");
+      if (casesNavItem) casesNavItem.click();
+    }
+    handleTopSearch();
+  });
 }
 
 // Init
 loadData().then(() => {
+  initElements();
+  renderAll();
   bindEvents();
 });

@@ -85,6 +85,33 @@ function showMessage(element, message, type) {
   element.dataset.type = type;
 }
 
+async function syncFromCloud() {
+  try {
+    const res = await fetch("/api/load");
+    const cloudData = await res.json();
+    if (cloudData) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+      return cloudData;
+    }
+  } catch (e) {
+    console.warn("Cloud sync failed, using local data", e);
+  }
+  return getStoredData();
+}
+
+async function syncToCloud(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  try {
+    await fetch("/api/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+  } catch (e) {
+    console.error("Cloud save failed:", e);
+  }
+}
+
 function wireLoginPage() {
   const form = document.getElementById("loginPageForm");
   const feedback = document.getElementById("authFeedback");
@@ -93,10 +120,10 @@ function wireLoginPage() {
     return;
   }
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const data = getStoredData();
+    const data = await syncFromCloud();
     const formData = new FormData(form);
     const email = String(formData.get("email")).trim().toLowerCase();
     const password = String(formData.get("password")).trim();
@@ -109,16 +136,18 @@ function wireLoginPage() {
       return;
     }
 
-    // if (user.role !== "client") {
-    //   showMessage(feedback, "Only client accounts can log in right now.", "error");
-    //   return;
-    // }
+    if (user.status === "blocked") {
+      showMessage(feedback, "This account has been restricted.", "error");
+      return;
+    }
 
     localStorage.setItem(SESSION_KEY, user.id);
     showMessage(feedback, `Welcome back, ${user.name}. Redirecting...`, "success");
     window.setTimeout(() => {
       if (user.role === "assistant") {
         window.location.href = "assistant.html";
+      } else if (user.role === "admin") {
+        window.location.href = "index.html#dashboardSection";
       } else {
         window.location.href = "index.html#summarySection";
       }
@@ -134,10 +163,10 @@ function wireRegisterPage() {
     return;
   }
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const data = getStoredData();
+    const data = await syncFromCloud();
     const formData = new FormData(form);
     const email = String(formData.get("email")).trim().toLowerCase();
 
@@ -154,16 +183,26 @@ function wireRegisterPage() {
       role: formData.get("role") || "client",
       phone: String(formData.get("phone")).trim(),
       department: String(formData.get("department")).trim(),
-      verified: false
+      verified: false,
+      status: "active"
     };
 
     data.users.push(user);
     addNotification(data, "u-admin", "Profile Verifying Notification", `${user.name} registered and needs profile verification.`);
-    saveStoredData(data);
+    
+    await syncToCloud(data);
 
     showMessage(feedback, "Registration complete. Redirecting to login...", "success");
     window.setTimeout(() => {
-      window.location.href = "login.html";
+      // If we're on the assistant gate, stay here but switch to login tab
+      const isGate = window.location.pathname.includes("assistant-gate.html");
+      if (isGate && typeof switchGateTab === "function") {
+        switchGateTab("gate-login");
+        form.reset();
+        feedback.textContent = "";
+      } else {
+        window.location.href = "login.html";
+      }
     }, 800);
   });
 }

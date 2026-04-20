@@ -9,8 +9,8 @@
 </head>
 <body>
   <div class="assistant-shell">
-    <!-- Sidebar -->
-    <aside class="assistant-sidebar">
+    <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
+    <aside class="assistant-sidebar" id="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-brand-mark">SL</div>
         <span class="sidebar-brand-name">SASF LAW FIRM</span>
@@ -32,9 +32,9 @@
           <span class="nav-icon">📅</span>
           <span class="nav-text">Appointments</span>
         </a>
-        <a href="javascript:void(0)" class="nav-item" data-section="search">
-          <span class="nav-icon">🔍</span>
-          <span class="nav-text">Search/Filter</span>
+        <a href="javascript:void(0)" class="nav-item" data-section="lawyers">
+          <span class="nav-icon">⚖️</span>
+          <span class="nav-text">Lawyers</span>
         </a>
       </nav>
       <div class="sidebar-footer">
@@ -50,6 +50,12 @@
         <div class="header-title">
           <h1 id="pageTitle">Dashboard Overview</h1>
           <p id="pageSubtitle">Welcome back, Assistant</p>
+        </div>
+        <div class="header-search-container">
+          <div class="header-search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="topSearchInput" placeholder="Search cases, documents, or lawyers...">
+          </div>
         </div>
         <div class="user-controls">
           <div class="user-banner" id="userBanner" style="margin-top:0; border:none; background:transparent; padding:0;">
@@ -157,46 +163,24 @@
         </div>
       </section>
 
-      <!-- Search & Filter Section -->
-      <section id="search" class="module-section">
-        <div class="search-filter-card">
-          <div class="search-field">
-            <label><span>Global Search</span></label>
-            <input type="text" id="globalSearchInput" placeholder="Case ID, Client Name, Keywords...">
-          </div>
-          <div class="filter-field">
-            <label><span>Case Type</span></label>
-            <select id="filterCaseType">
-              <option value="">All Types</option>
-              <option value="Criminal">Criminal</option>
-              <option value="Civil">Civil</option>
-              <option value="Family">Family</option>
-              <option value="Corporate">Corporate</option>
-            </select>
-          </div>
-          <div class="filter-field">
-            <label><span>Priority</span></label>
-            <select id="filterPriority">
-              <option value="">All Priorities</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
-          </div>
+      <!-- Lawyers Section -->
+      <section id="lawyers" class="module-section">
+        <div class="section-headline" style="margin-bottom: 20px;">
+          <h3>Legal Counsel Directory</h3>
+          <p class="section-desc">View and contact assigned lawyers and partners.</p>
         </div>
         <div class="data-table-container">
           <table class="data-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Subject</th>
-                <th>Client</th>
-                <th>Lawyer</th>
-                <th>Priority</th>
+                <th>Lawyer Name</th>
+                <th>Department</th>
+                <th>Email Address</th>
+                <th>Phone</th>
                 <th>Status</th>
               </tr>
             </thead>
-            <tbody id="searchTableBody">
+            <tbody id="lawyerTableBody">
               <!-- Dynamic Content -->
             </tbody>
           </table>

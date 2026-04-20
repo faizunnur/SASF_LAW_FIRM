@@ -802,61 +802,7 @@ td {
   letter-spacing: 0.08em;
 }
 
-@media (max-width: 900px) {
-  .main-grid,
-  .hero-grid,
-  .form-grid-two,
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
-@media (max-width: 600px) {
-  .topbar,
-  .main-navbar,
-  .panel-heading,
-  .section-headline,
-  .user-banner,
-  .entry-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .nav-left,
-  .nav-right {
-    width: 100%;
-  }
-
-  .topbar-actions,
-  .search-row {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .auth-page-card {
-    padding: 28px 22px;
-    border-radius: 20px;
-  }
-
-  .auth-page-card-wide {
-    width: min(100%, 560px);
-  }
-
-  .auth-page-form {
-    gap: 14px;
-  }
-
-  .auth-page-form input,
-  .auth-page-form select,
-  .auth-page-form textarea {
-    height: 50px;
-  }
-
-  .auth-page-form .primary-btn {
-    min-height: 52px;
-  }
-}
 
 .selection-made {
   border-color: #059669 !important;
@@ -1167,11 +1113,7 @@ td {
   border-radius: 12px;
 }
 
-@media (max-width: 600px) {
-  .form-grid-inner {
-    grid-template-columns: 1fr;
-  }
-}
+
 
 
 /* Branded Registration Style (YourEvent Reference) */
@@ -1240,5 +1182,77 @@ td {
 
 .branded-submit-btn:hover {
   filter: brightness(1.1);
+}
+
+/* --- Responsive Design (Media Queries) --- */
+
+@media (max-width: 900px) {
+  .main-grid,
+  .hero-grid,
+  .stats-grid,
+  .form-grid-two {
+    grid-template-columns: 1fr;
+  }
+
+  /* Specific fix for profile page stacking */
+  .profile-redesign-container {
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-summary-side {
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--border);
+    padding: 30px 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar,
+  .main-navbar,
+  .panel-heading,
+  .section-headline,
+  .user-banner,
+  .entry-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .nav-left,
+  .nav-right {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .topbar-actions,
+  .search-row {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .auth-page-card {
+    padding: 24px 18px;
+    border-radius: 12px;
+  }
+
+  .auth-page-card-wide {
+    max-width: 100%;
+  }
+
+  /* Table responsiveness */
+  .table-wrap, .report-table-wrap {
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .branded-registration-form .form-row-2col,
+  .form-grid-inner {
+    grid-template-columns: 1fr !important;
+  }
 }
 

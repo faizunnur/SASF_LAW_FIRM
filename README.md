@@ -23,11 +23,12 @@ The Administrator oversees the entire system and manages the firm's operations.
 
 ### 2. Assistant
 The Assistant supports the legal team by handling the administrative lifecycle of legal cases.
-- **Case Lifecycle Management**: Create, update, and manage case statuses.
-- **Legal Assignment**: Assign lawyers to specific cases and track progress.
+- **Command Center Dashboard**: Personalized overview of assigned cases, recent documents, and pending appointments.
+- **Lawyer Directory**: Integrated access to the firm's legal counsel roster with search and filter capabilities.
+- **Global Search**: Persistent header search bar for instant access to cases, documents, and lawyers.
+- **Case Lifecycle Management**: Create, update, and manage case statuses with automatic assistant attribution.
 - **Appointment Handling**: Review appointment requests, verify payments, and confirm schedules.
 - **Document Repository**: Manage the document library (uploads, updates, deletions).
-- **Advanced Search**: Filter the case database by keywords, types, and priority.
 
 ### 3. Lawyer
 Lawyers focus on case details and represent clients in legal proceedings.
@@ -47,16 +48,19 @@ Clients interact with the firm to track their legal matters.
 
 ### Prerequisites
 - Node.js installed on your machine.
+- Neon PostgreSQL connection string (configure in `.env`).
 
 ### Installation
 1. Clone the repository:
    ```bash
    git clone <repository-url>
    ```
-2. Install dependencies (Optional if running locally with LocalStorage):
+2. Install dependencies:
    ```bash
    npm install
    ```
+3. Configure Environment:
+   Create a `.env` file with your `DATABASE_URL` and `PORT`.
 
 ### Running the Project
 - **Production/Server Mode**:
@@ -65,10 +69,11 @@ Clients interact with the firm to track their legal matters.
   ```
   The app will be available at `http://localhost:3000`.
 
-- **Client-Only Mode**:
-  Simply open `index.html` in your browser. The system will default to LocalStorage for data persistence.
+- **Hybrid Synchronization**:
+  The system automatically synchronizes data between the browser's LocalStorage and the Cloud SQL database for high availability and offline resilience.
 
 ## 🛠️ Technology Stack
-- **Styling**: Premium custom CSS with a focus on glassmorphism and modern typography.
-- **Storage**: Hybrid model supporting both cloud SQL and browser-based LocalStorage.
+- **Styling**: Premium custom CSS with a focus on glassmorphism, responsive grids, and modern typography.
+- **Database**: SQL-based (Neon/PostgreSQL) with a robust synchronization layer for multi-tab consistency.
+- **Search**: Real-time context-aware global search integrated into the dashboard header.
 - **Icons**: Emoji-based iconography for lightweight, framework-free visual cues.

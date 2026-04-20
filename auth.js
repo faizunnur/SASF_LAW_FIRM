@@ -1,5 +1,8 @@
 const STORAGE_KEY = "lexbridge-data-v1";
 const SESSION_KEY = "lexbridge-session-v1";
+const LAWYER_TOKEN_KEY = "lawyer_token";
+const LAWYER_ID_KEY = "lawyer_id";
+const LAWYER_NAME_KEY = "lawyer_name";
 
 function seedDemoData() {
   return {
@@ -85,6 +88,18 @@ function showMessage(element, message, type) {
   element.dataset.type = type;
 }
 
+function clearLawyerDashboardSession() {
+  localStorage.removeItem(LAWYER_TOKEN_KEY);
+  localStorage.removeItem(LAWYER_ID_KEY);
+  localStorage.removeItem(LAWYER_NAME_KEY);
+}
+
+function setLawyerDashboardSession(user) {
+  localStorage.setItem(LAWYER_TOKEN_KEY, `legacy-token-${user.id}`);
+  localStorage.setItem(LAWYER_ID_KEY, user.id);
+  localStorage.setItem(LAWYER_NAME_KEY, user.name);
+}
+
 async function syncFromCloud() {
   try {
     const res = await fetch("/api/load");
@@ -145,10 +160,16 @@ function wireLoginPage() {
     showMessage(feedback, `Welcome back, ${user.name}. Redirecting...`, "success");
     window.setTimeout(() => {
       if (user.role === "assistant") {
+        clearLawyerDashboardSession();
         window.location.href = "assistant.html";
+      } else if (user.role === "lawyer") {
+        setLawyerDashboardSession(user);
+        window.location.href = "lawyer.html";
       } else if (user.role === "admin") {
+        clearLawyerDashboardSession();
         window.location.href = "index.html#dashboardSection";
       } else {
+        clearLawyerDashboardSession();
         window.location.href = "index.html#summarySection";
       }
     }, 700);
@@ -175,12 +196,15 @@ function wireRegisterPage() {
       return;
     }
 
+    const requestedRole = String(formData.get("role") || "client").trim().toLowerCase();
+    const normalizedRole = ["client", "lawyer", "assistant"].includes(requestedRole) ? requestedRole : "client";
+
     const user = {
       id: `u-${Date.now()}`,
       name: String(formData.get("name")).trim(),
       email,
       password: String(formData.get("password")).trim(),
-      role: formData.get("role") || "client",
+      role: normalizedRole,
       phone: String(formData.get("phone")).trim(),
       department: String(formData.get("department")).trim(),
       verified: false,
@@ -195,7 +219,7 @@ function wireRegisterPage() {
     showMessage(feedback, "Registration complete. Redirecting to login...", "success");
     window.setTimeout(() => {
       // If we're on the assistant gate, stay here but switch to login tab
-      const isGate = window.location.pathname.includes("assistant-gate.html");
+      const isGate = window.location.pathname.includes("assistant-gate.html") || window.location.pathname === "/assistant";
       if (isGate && typeof switchGateTab === "function") {
         switchGateTab("gate-login");
         form.reset();

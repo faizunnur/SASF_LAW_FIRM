@@ -25,8 +25,6 @@
         <div class="nav-left">
           <a href="#authSection">Home</a>
           <a href="#summarySection">Overview</a>
-          <a href="#moduleSection">Modules</a>
-          <a href="#dashboardSection">Dashboard</a>
         </div>
         <div class="nav-right">
           <a href="login.html">Login</a>
@@ -56,51 +54,20 @@
         <div class="panel-heading">
           <div>
             <p class="section-kicker">Access Control</p>
-            <h2>Register, login, and recover password</h2>
-          </div>
-          <div class="tab-switch">
-            <button class="tab-btn active" data-auth-tab="login" type="button">Login</button>
-            <button class="tab-btn" data-auth-tab="register" type="button">Register</button>
-            <button class="tab-btn" data-auth-tab="recover" type="button">Recover</button>
+            <h2>Access Your Account</h2>
           </div>
         </div>
 
         <div class="auth-view active" id="loginView">
-          <form id="loginForm" class="form-grid">
-            <label><span>Email</span><input type="email" name="email" placeholder="Enter email" required></label>
-            <label><span>Password</span><input type="password" name="password" placeholder="Enter password" required></label>
-            <button class="primary-btn" type="submit">Login</button>
-          </form>
-        </div>
-
-        <div class="auth-view" id="registerView">
-          <div class="registration-header-bar">Online Registration</div>
-          <form id="registerForm" class="branded-registration-form">
-            <div class="form-row-2col">
-              <label><span>Full Name</span><input type="text" name="name" placeholder="Full name" required></label>
-              <label><span>Phone Number</span><input type="text" name="phone" placeholder="Phone number" required></label>
-            </div>
-            <div class="form-row-full">
-              <label><span>Email Address</span><input type="email" name="email" placeholder="Email address" required></label>
-            </div>
-            <div class="form-row-full">
-              <label><span>Create Password</span><input type="password" name="password" placeholder="Create password" required></label>
-            </div>
-            <div class="form-row-full">
-              <label><span>Occupation</span><input type="text" name="department" placeholder="Your occupation" required></label>
-            </div>
-            <div class="form-row-full">
-              <label><span>Default Role</span><input type="text" name="roleLabel" value="Client" readonly class="readonly-input"></label>
-            </div>
-            <button class="primary-btn branded-submit-btn" type="submit">Complete Registration</button>
-          </form>
-        </div>
-
-        <div class="auth-view" id="recoverView">
-          <form id="recoverForm" class="form-grid">
-            <label><span>Email</span><input type="email" name="email" placeholder="Enter your registered email" required></label>
-            <button class="primary-btn" type="submit">Send Recovery Notice</button>
-          </form>
+          <p class="hero-text" style="margin: 0 0 16px; max-width: 70ch;">
+            Use the dedicated pages for sign in and registration. This keeps authentication clean and avoids duplicate login forms.
+          </p>
+          <div class="action-row">
+            <a class="primary-btn" href="login.html">Go to Login</a>
+            <a class="ghost-btn" href="register.html">Create Account</a>
+            <a class="ghost-btn" href="assistant-gate.html">Assistant Portal</a>
+            <a class="ghost-btn" href="admin-gate.html">Admin Portal</a>
+          </div>
         </div>
       </section>
 
@@ -157,7 +124,7 @@
             <div class="section-headline">
               <h3>Notifications</h3>
               <div class="action-row" id="notificationActions">
-                <button class="table-btn danger-action" id="deleteSelectedNotifications" type="button">Delete Selected 🗑️</button>
+                <button class="table-btn danger-action" id="deleteSelectedNotifications" type="button">Delete Selected</button>
               </div>
             </div>
             <div id="notificationList" class="card-list"></div>
@@ -180,7 +147,7 @@
 
           <section class="dashboard-section" id="reportSection">
             <div class="section-headline">
-              <h3>Report Generation 📊</h3>
+              <h3>Report Generation</h3>
             </div>
             
             <div class="report-controls-grid">
@@ -195,14 +162,14 @@
               </div>
               <div class="report-btn-group">
                 <button class="report-card-btn" id="genDetailsReportBtn">
-                  <span class="icon">📄</span>
+                  <span class="icon">DOC</span>
                   <div class="report-card-text">
                     <strong>Details Report</strong>
                     <span>Case & User Activities</span>
                   </div>
                 </button>
                 <button class="report-card-btn" id="genTransReportBtn">
-                  <span class="icon">💰</span>
+                  <span class="icon">FIN</span>
                   <div class="report-card-text">
                     <strong>Transaction Report</strong>
                     <span>Financial Summaries</span>
@@ -215,7 +182,7 @@
               <div class="report-header">
                 <h4 id="reportTitle">Generated Report</h4>
                 <div class="report-header-actions">
-                   <button class="primary-btn-sm" type="button" onclick="window.print()">Download PDF 📥</button>
+                   <button class="primary-btn-sm" type="button" onclick="window.print()">Download PDF</button>
                 </div>
               </div>
               <div id="reportOutputText" class="report-content-box">
@@ -229,7 +196,7 @@
   </div>
 
   <div id="toast" class="toast" aria-live="polite"></div>
-  <button id="scrollToTopBtn" class="scroll-top-btn hidden" type="button" aria-label="Scroll to top">↑</button>
+  <button id="scrollToTopBtn" class="scroll-top-btn hidden" type="button" aria-label="Scroll to top">Top</button>
   <script src="script.js"></script>
 </body>
 </html>

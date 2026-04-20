@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lawyer Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="lawyer.css" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    integrity="sha512-SnH5WK+bZxgPHs44uWix+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkR4A9k6+0R7A6f0h5h6K7U6fP8N4+V+4QmQ=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+</head>
+<body>
+  <div id="app">
+    <section id="loginView" class="view">
+      <div class="auth-card">
+        <div class="brand-row">
+          <i class="fa-solid fa-scale-balanced"></i>
+          <h1>Lawyer Portal</h1>
+        </div>
+        <p class="muted">Sign in to manage profile, cases, documents, schedule, and notifications.</p>
+
+        <form id="loginForm">
+          <div class="field">
+            <label for="loginEmail">Email</label>
+            <input id="loginEmail" type="email" placeholder="lawyer@example.com" required />
+          </div>
+          <div class="field">
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" placeholder="********" required />
+          </div>
+          <button type="submit" class="btn">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            Login
+          </button>
+        </form>
+
+        <p class="hint">Demo credentials: <strong>lawyer@example.com</strong> / <strong>password123</strong></p>
+      </div>
+    </section>
+
+    <section id="dashboardView" class="view hidden">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="sidebarToggle" class="icon-btn" aria-label="Toggle Sidebar">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <h1>Lawyer Dashboard</h1>
+        </div>
+
+        <div class="topbar-right">
+          <div id="notifArea" class="notif-area">
+            <button id="notifBell" class="icon-btn" aria-label="Notifications">
+              <i class="fa-regular fa-bell"></i>
+              <span id="notifBadge" class="badge hidden">0</span>
+            </button>
+
+            <div id="notifDropdown" class="dropdown hidden">
+              <div class="dropdown-head">
+                <strong>Notifications</strong>
+                <button id="openNotifPanelBtn" class="text-btn">Open Panel</button>
+              </div>
+              <ul id="notifDropdownList" class="dropdown-list"></ul>
+            </div>
+          </div>
+
+          <div id="userChip" class="user-chip">Lawyer</div>
+          <button id="logoutBtn" class="btn btn-secondary">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <div class="dashboard-shell">
+        <aside id="sidebar" class="sidebar">
+          <button class="nav-item active" data-panel="profile">
+            <i class="fa-regular fa-user"></i>
+            Profile
+          </button>
+          <button class="nav-item" data-panel="cases">
+            <i class="fa-solid fa-briefcase"></i>
+            Cases
+          </button>
+          <button class="nav-item" data-panel="documents">
+            <i class="fa-regular fa-file-lines"></i>
+            Documents
+          </button>
+          <button class="nav-item" data-panel="schedule">
+            <i class="fa-regular fa-calendar"></i>
+            Schedule
+          </button>
+          <button class="nav-item" data-panel="notifications">
+            <i class="fa-regular fa-bell"></i>
+            Notifications
+          </button>
+        </aside>
+
+        <main class="main-content">
+          <div id="flashContainer"></div>
+          <section class="overview-strip">
+            <div id="overviewStats" class="overview-grid"></div>
+          </section>
+
+          <section id="panel-profile" class="panel">
+            <div class="card">
+              <div class="card-head">
+                <h2>Lawyer Profile</h2>
+                <div class="row-actions">
+                  <button id="editProfileBtn" class="btn btn-secondary">
+                    <i class="fa-regular fa-pen-to-square"></i>
+                    Edit
+                  </button>
+                  <button id="deleteProfileBtn" class="btn btn-danger">
+                    <i class="fa-regular fa-trash-can"></i>
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <div id="profileView"></div>
+
+              <form id="profileForm" class="grid-form hidden">
+                <div class="field">
+                  <label for="profileName">Name</label>
+                  <input id="profileName" type="text" required />
+                </div>
+                <div class="field">
+                  <label for="profileEmail">Email</label>
+                  <input id="profileEmail" type="email" required />
+                </div>
+                <div class="field">
+                  <label for="profilePhone">Phone</label>
+                  <input id="profilePhone" type="text" required />
+                </div>
+                <div class="form-actions full">
+                  <button type="submit" class="btn">Save Changes</button>
+                  <button type="button" id="cancelProfileEditBtn" class="btn btn-secondary">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </section>
+
+          <section id="panel-cases" class="panel hidden">
+            <div class="card">
+              <div class="card-head">
+                <h2>Case Control Panel</h2>
+                <button id="toggleCaseFormBtn" class="btn">
+                  <i class="fa-solid fa-plus"></i>
+                  Create Case
+                </button>
+              </div>
+
+              <form id="caseCreateForm" class="grid-form hidden">
+                <div class="field">
+                  <label for="newCaseTitle">Case Title</label>
+                  <input id="newCaseTitle" type="text" required />
+                </div>
+                <div class="field">
+                  <label for="newCaseClientName">Client Name</label>
+                  <input id="newCaseClientName" type="text" required />
+                </div>
+                <div class="field">
+                  <label for="newCaseStatus">Status</label>
+                  <select id="newCaseStatus" required>
+                    <option value="Open">Open</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="newCasePriority">Priority</label>
+                  <select id="newCasePriority" required>
+                    <option value="High">High</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="newCaseType">Case Type</label>
+                  <input id="newCaseType" type="text" placeholder="Corporate, Property, Criminal..." required />
+                </div>
+                <div class="field">
+                  <label for="newCaseImportantDate">Important Date</label>
+                  <input id="newCaseImportantDate" type="date" />
+                </div>
+                <div class="field full">
+                  <label for="newCaseOpposingCounsel">Opposing Counsel</label>
+                  <input id="newCaseOpposingCounsel" type="text" placeholder="Firm or advocate name" />
+                </div>
+                <div class="field full">
+                  <label for="newCaseDescription">Case Description</label>
+                  <textarea id="newCaseDescription" rows="3" required></textarea>
+                </div>
+                <div class="form-actions full">
+                  <button type="submit" class="btn">Save Case</button>
+                </div>
+              </form>
+
+              <div class="filters">
+                <div class="field">
+                  <label for="caseSearch">Search (Case ID / Client / Status)</label>
+                  <input id="caseSearch" type="text" placeholder="e.g. C-1001, Sarah, Open" />
+                </div>
+                <div class="field">
+                  <label for="casePriorityFilter">Priority</label>
+                  <select id="casePriorityFilter">
+                    <option value="">All Priorities</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="caseTypeFilter">Case Type</label>
+                  <select id="caseTypeFilter">
+                    <option value="">All Types</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Case ID</th>
+                      <th>Title</th>
+                      <th>Client</th>
+                      <th>Status</th>
+                      <th>Priority</th>
+                      <th>Type</th>
+                      <th>Last Updated</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="casesTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section id="panel-documents" class="panel hidden">
+            <div class="card">
+              <div class="card-head">
+                <h2>Document Control Panel</h2>
+                <button id="toggleDocFormBtn" class="btn">
+                  <i class="fa-solid fa-plus"></i>
+                  New Document
+                </button>
+              </div>
+
+              <form id="documentCreateForm" class="grid-form hidden">
+                <div class="field">
+                  <label for="docTitle">Title</label>
+                  <input id="docTitle" type="text" required />
+                </div>
+                <div class="field">
+                  <label for="docCaseSelect">Case</label>
+                  <select id="docCaseSelect" required></select>
+                </div>
+                <div class="field full">
+                  <label for="docDescription">Description</label>
+                  <textarea id="docDescription" rows="3" required></textarea>
+                </div>
+                <div class="form-actions full">
+                  <button type="submit" class="btn">Create Document</button>
+                </div>
+              </form>
+
+              <div class="filters">
+                <div class="field">
+                  <label for="docSearchInput">Search (Title / Doc ID / Case ID)</label>
+                  <input id="docSearchInput" type="text" placeholder="e.g. D-1001, contract, C-1002" />
+                </div>
+                <div class="field">
+                  <label for="docFromDate">From Date</label>
+                  <input id="docFromDate" type="date" />
+                </div>
+                <div class="field">
+                  <label for="docToDate">To Date</label>
+                  <input id="docToDate" type="date" />
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Doc ID</th>
+                      <th>Title</th>
+                      <th>Case ID</th>
+                      <th>Type</th>
+                      <th>Upload Date</th>
+                      <th>Description</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="docsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section id="panel-schedule" class="panel hidden">
+            <div class="split-grid">
+              <div class="card">
+                <div class="card-head">
+                  <h2>Add Schedule Event</h2>
+                </div>
+                <form id="eventCreateForm" class="grid-form">
+                  <div class="field">
+                    <label for="eventTitle">Title</label>
+                    <input id="eventTitle" type="text" required />
+                  </div>
+                  <div class="field">
+                    <label for="eventType">Type</label>
+                    <select id="eventType" required>
+                      <option value="Hearing">Hearing</option>
+                      <option value="Meeting">Meeting</option>
+                      <option value="Deadline">Deadline</option>
+                      <option value="Court Appearance">Court Appearance</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="eventDate">Date</label>
+                    <input id="eventDate" type="date" required />
+                  </div>
+                  <div class="field">
+                    <label for="eventTime">Time</label>
+                    <input id="eventTime" type="time" required />
+                  </div>
+                  <div class="form-actions full">
+                    <button type="submit" class="btn">Add Event</button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="card">
+                <div class="card-head">
+                  <h2>Reminders (Today/Tomorrow)</h2>
+                </div>
+                <ul id="remindersList" class="clean-list"></ul>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="calendar-toolbar">
+                <button id="prevMonthBtn" class="icon-btn" aria-label="Previous Month">
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <h3 id="calendarMonthLabel"></h3>
+                <button id="nextMonthBtn" class="icon-btn" aria-label="Next Month">
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </div>
+
+              <div class="calendar-weekdays">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              </div>
+              <div id="calendarGrid" class="calendar-grid"></div>
+            </div>
+          </section>
+
+          <section id="panel-notifications" class="panel hidden">
+            <div class="card">
+              <div class="card-head">
+                <h2>Notifications</h2>
+                <button id="markAllNotifBtn" class="btn btn-secondary">Mark All Read</button>
+              </div>
+              <ul id="notificationsPanelList" class="clean-list"></ul>
+            </div>
+          </section>
+        </main>
+      </div>
+    </section>
+  </div>
+
+  <div id="globalSpinner" class="spinner-overlay hidden">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="caseModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-head">
+        <h3>Case Details</h3>
+        <button class="icon-btn" data-close="caseModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div id="caseDetailBody" class="detail-body"></div>
+
+      <form id="caseUpdateForm" class="grid-form">
+        <div class="field">
+          <label for="caseEditTitle">Case Title</label>
+          <input id="caseEditTitle" type="text" required />
+        </div>
+        <div class="field">
+          <label for="caseEditClientName">Client Name</label>
+          <input id="caseEditClientName" type="text" required />
+        </div>
+        <div class="field">
+          <label for="caseStatusSelect">Update Status</label>
+          <select id="caseStatusSelect">
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Pending">Pending</option>
+            <option value="Closed">Closed</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="caseEditPriority">Priority</label>
+          <select id="caseEditPriority" required>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="caseEditType">Case Type</label>
+          <input id="caseEditType" type="text" required />
+        </div>
+        <div class="field">
+          <label for="caseEditImportantDate">Important Date</label>
+          <input id="caseEditImportantDate" type="date" />
+        </div>
+        <div class="field full">
+          <label for="caseEditOpposingCounsel">Opposing Counsel</label>
+          <input id="caseEditOpposingCounsel" type="text" />
+        </div>
+        <div class="field full">
+          <label for="caseEditDescription">Description</label>
+          <textarea id="caseEditDescription" rows="3"></textarea>
+        </div>
+        <div class="field full">
+          <label for="caseNotes">Add Notes</label>
+          <textarea id="caseNotes" rows="4" placeholder="Write update notes..."></textarea>
+        </div>
+        <div class="form-actions full">
+          <button type="submit" class="btn">Save Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="documentModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-head">
+        <h3>View / Edit Document</h3>
+        <button class="icon-btn" data-close="documentModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="documentEditForm" class="grid-form">
+        <input id="editDocId" type="hidden" />
+        <div class="field">
+          <label for="editDocTitle">Title</label>
+          <input id="editDocTitle" type="text" required />
+        </div>
+        <div class="field">
+          <label for="editDocCaseSelect">Case</label>
+          <select id="editDocCaseSelect" required></select>
+        </div>
+        <div class="field full">
+          <label for="editDocDescription">Description</label>
+          <textarea id="editDocDescription" rows="4" required></textarea>
+        </div>
+        <div class="form-actions full">
+          <button type="submit" class="btn">Save Document</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="eventModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-head">
+        <h3>Reschedule Event</h3>
+        <button class="icon-btn" data-close="eventModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="eventEditForm" class="grid-form">
+        <input id="editEventId" type="hidden" />
+        <div class="field">
+          <label for="editEventTitle">Title</label>
+          <input id="editEventTitle" type="text" required />
+        </div>
+        <div class="field">
+          <label for="editEventDate">Date</label>
+          <input id="editEventDate" type="date" required />
+        </div>
+        <div class="field">
+          <label for="editEventTime">Time</label>
+          <input id="editEventTime" type="time" required />
+        </div>
+        <div class="form-actions full">
+          <button type="submit" class="btn">Update Event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="lawyer.js"></script>
+</body>
+</html>

@@ -1,5 +1,8 @@
 const STORAGE_KEY = "lexbridge-data-v1";
 const SESSION_KEY = "lexbridge-session-v1";
+const LAWYER_TOKEN_KEY = "lawyer_token";
+const LAWYER_ID_KEY = "lawyer_id";
+const LAWYER_NAME_KEY = "lawyer_name";
 
 const modules = [
   { id: "profileSection", title: "Profile", text: "View and manage user profile information." },
@@ -9,7 +12,7 @@ const modules = [
 ];
 
 const roleModules = {
-  guest: ["profileSection", "notificationSection", "userManagementSection"],
+  guest: [],
   client: ["profileSection", "notificationSection"],
   lawyer: ["profileSection", "notificationSection"],
   assistant: ["profileSection", "notificationSection"],
@@ -165,9 +168,25 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => elements.toast.classList.remove("show"), 2800);
 }
 
+function clearLawyerDashboardSession() {
+  localStorage.removeItem(LAWYER_TOKEN_KEY);
+  localStorage.removeItem(LAWYER_ID_KEY);
+  localStorage.removeItem(LAWYER_NAME_KEY);
+}
+
+function setLawyerDashboardSession(user) {
+  localStorage.setItem(LAWYER_TOKEN_KEY, `legacy-token-${user.id}`);
+  localStorage.setItem(LAWYER_ID_KEY, user.id);
+  localStorage.setItem(LAWYER_NAME_KEY, user.name);
+}
+
 function switchAuthTab(tabName) {
-  elements.authTabs.forEach((button) => button.classList.toggle("active", button.dataset.authTab === tabName));
-  Object.entries(elements.authViews).forEach(([name, section]) => section.classList.toggle("active", name === tabName));
+  if (elements.authTabs.length) {
+    elements.authTabs.forEach((button) => button.classList.toggle("active", button.dataset.authTab === tabName));
+  }
+  Object.entries(elements.authViews).forEach(([name, section]) => {
+    if (section) section.classList.toggle("active", name === tabName);
+  });
 }
 
 function addNotification(userId, title, message) {
@@ -191,7 +210,7 @@ function renderUserBanner() {
     elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>No active user</h3><p>Login or create a new account.</p></div><span class="role-badge">Guest</span>`;
     return;
   }
-  elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} • ${titleCase(user.role)} • ${user.department}</p></div><span class="role-badge">${titleCase(user.role)}</span>`;
+  elements.userBanner.innerHTML = `<div><p class="section-kicker">Current Session</p><h3>${user.name}</h3><p>${user.email} - ${titleCase(user.role)} - ${user.department}</p></div><span class="role-badge">${titleCase(user.role)}</span>`;
 }
 
 function renderBackendStatus() {
@@ -272,7 +291,7 @@ function renderProfileForm() {
         </div>
         <div class="profile-actions-row">
           ${user.role === "client" ? "" : '<button class="primary-btn prof-btn-update" type="submit">Save Changes</button>'}
-          <button class="table-btn danger-action prof-btn-delete" id="deleteProfileBtn" type="button">Delete Account 🗑️</button>
+          <button class="table-btn danger-action prof-btn-delete" id="deleteProfileBtn" type="button">Delete Account</button>
         </div>
       </div>
     </div>
@@ -291,7 +310,7 @@ function renderNotifications() {
       <div class="notif-grid">
         <div class="notif-check"><input type="checkbox" class="notif-checkbox" data-notif-id="${n.id}"></div>
         <div class="notif-content"><h4>${n.title}</h4><p>${n.message}</p><div class="meta">${n.date}</div></div>
-        <div class="notif-actions"><button class="table-btn danger-action" data-delete-notif="${n.id}" type="button">🗑️</button></div>
+        <div class="notif-actions"><button class="table-btn danger-action" data-delete-notif="${n.id}" type="button">Delete</button></div>
       </div>
     </article>`).join("") : `<div class="empty-state">No notifications.</div>`;
 }
@@ -308,7 +327,7 @@ function renderUserManagementForm() {
             <input type="text" id="userComboboxInput" placeholder="Name or email..." class="combobox-input" autocomplete="off">
             <input type="hidden" name="userId" id="selectedUserId">
             <div id="comboboxResults" class="combobox-results hidden">
-              ${selectables.map(u => `<div class="combobox-item" data-id="${u.id}" data-search="${u.name.toLowerCase()} ${u.email.toLowerCase()}"><strong>${u.name}</strong> • ${titleCase(u.role)}</div>`).join("")}
+              ${selectables.map(u => `<div class="combobox-item" data-id="${u.id}" data-search="${u.name.toLowerCase()} ${u.email.toLowerCase()}"><strong>${u.name}</strong> - ${titleCase(u.role)}</div>`).join("")}
             </div>
           </div>
         </label>
@@ -414,7 +433,8 @@ function renderAll() {
   const isUser = !!user;
   document.getElementById("authSection").classList.toggle("hidden", isUser);
   document.getElementById("summarySection").classList.toggle("hidden", isAdmin);
-  document.getElementById("moduleSection").classList.toggle("hidden", isAdmin);
+  document.getElementById("moduleSection").classList.toggle("hidden", !isUser || isAdmin);
+  document.getElementById("dashboardSection").classList.toggle("hidden", !isUser);
   document.querySelector(".main-navbar").classList.toggle("hidden", isAdmin);
   document.querySelector(".hero-grid").classList.toggle("hidden", isUser);
   if (elements.logoutBtn) elements.logoutBtn.classList.toggle("hidden", !user);
@@ -422,132 +442,181 @@ function renderAll() {
 }
 
 function bindEvents() {
-  elements.authTabs.forEach(b => b.addEventListener("click", () => switchAuthTab(b.dataset.authTab)));
-  elements.loginForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const email = fd.get("email").trim().toLowerCase();
-    const pass = fd.get("password").trim();
-    
-    const u = appState.data.users.find(i => i.email.toLowerCase() === email && i.password === pass);
-    if (!u) return showToast("Invalid email or password.");
-    if (u.status === "blocked") return showToast("Account restricted.");
-    
-    appState.currentUserId = u.id; 
-    saveSession(); 
-    renderAll(); 
-    showToast(`Access Granted. Welcome back, ${u.name}.`);
-  });
+  if (elements.authTabs.length) {
+    elements.authTabs.forEach((button) => {
+      button.addEventListener("click", () => switchAuthTab(button.dataset.authTab));
+    });
+  }
 
-  elements.registerForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const email = fd.get("email").trim().toLowerCase();
-    if (appState.data.users.some(i => i.email.toLowerCase() === email)) return showToast("Email exists.");
-    const u = { id: `u-${Date.now()}`, name: fd.get("name"), email, password: fd.get("password"), role: "client", phone: fd.get("phone"), department: fd.get("department"), verified: false, status: "active" };
-    appState.data.users.push(u); addNotification("u-admin", "New Registration", `${u.name} joined.`);
-    saveData(); switchAuthTab("login"); e.currentTarget.reset(); renderAll(); showToast("Registered. Please login.");
-  });
+  if (elements.loginForm) {
+    elements.loginForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.currentTarget);
+      const email = fd.get("email").trim().toLowerCase();
+      const pass = fd.get("password").trim();
+
+      const u = appState.data.users.find(i => i.email.toLowerCase() === email && i.password === pass);
+      if (!u) return showToast("Invalid email or password.");
+      if (u.status === "blocked") return showToast("Account restricted.");
+
+      if (u.role === "assistant") {
+        clearLawyerDashboardSession();
+        localStorage.setItem(SESSION_KEY, u.id);
+        window.location.href = "assistant.html";
+        return;
+      }
+
+      if (u.role === "lawyer") {
+        setLawyerDashboardSession(u);
+        localStorage.setItem(SESSION_KEY, u.id);
+        window.location.href = "lawyer.html";
+        return;
+      }
+
+      clearLawyerDashboardSession();
+      appState.currentUserId = u.id;
+      saveSession();
+      renderAll();
+      showToast(`Access Granted. Welcome back, ${u.name}.`);
+    });
+  }
+
+  if (elements.registerForm) {
+    elements.registerForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.currentTarget);
+      const email = fd.get("email").trim().toLowerCase();
+      const requestedRole = String(fd.get("role") || "client").trim().toLowerCase();
+      const normalizedRole = ["client", "lawyer"].includes(requestedRole) ? requestedRole : "client";
+      if (appState.data.users.some(i => i.email.toLowerCase() === email)) return showToast("Email exists.");
+      const u = { id: `u-${Date.now()}`, name: fd.get("name"), email, password: fd.get("password"), role: normalizedRole, phone: fd.get("phone"), department: fd.get("department"), verified: false, status: "active" };
+      appState.data.users.push(u); addNotification("u-admin", "New Registration", `${u.name} joined.`);
+      saveData(); switchAuthTab("login"); e.currentTarget.reset(); renderAll(); showToast("Registered. Please login.");
+    });
+  }
 
   if (elements.logoutBtn) {
     elements.logoutBtn.addEventListener("click", () => {
+      clearLawyerDashboardSession();
       appState.currentUserId = null; appState.activeModuleId = null; saveSession(); renderAll(); showToast("Signed out.");
     });
   }
 
-  elements.moduleList.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-module-target]");
-    if (b) setActiveModule(b.dataset.moduleTarget);
-  });
+  if (elements.moduleList) {
+    elements.moduleList.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-module-target]");
+      if (b) setActiveModule(b.dataset.moduleTarget);
+    });
+  }
 
-  elements.adminNav.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-module-target]");
-    if (b) setActiveModule(b.dataset.moduleTarget);
-  });
+  if (elements.adminNav) {
+    elements.adminNav.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-module-target]");
+      if (b) setActiveModule(b.dataset.moduleTarget);
+    });
+  }
 
-  elements.profileForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const u = getCurrentUser(); if (!u || u.role === "client") return;
-    const fd = new FormData(e.currentTarget);
-    u.name = fd.get("name"); u.email = fd.get("email"); u.phone = fd.get("phone"); u.department = fd.get("department");
-    saveData(); renderAll(); showToast("Profile updated.");
-  });
-
-  elements.profileForm.addEventListener("click", (e) => {
-    const delBtn = e.target.closest("#deleteProfileBtn");
-    if (delBtn) {
-      if (!confirm("Are you sure you want to permanently delete your account? This action cannot be undone.")) return;
+  if (elements.profileForm) {
+    elements.profileForm.addEventListener("submit", (e) => {
+      e.preventDefault();
       const u = getCurrentUser(); if (!u || u.role === "client") return;
-      appState.data.users = appState.data.users.filter(i => i.id !== u.id);
-      appState.currentUserId = null; saveData(); saveSession(); renderAll(); showToast("Account deleted.");
-    }
-  });
+      const fd = new FormData(e.currentTarget);
+      u.name = fd.get("name"); u.email = fd.get("email"); u.phone = fd.get("phone"); u.department = fd.get("department");
+      saveData(); renderAll(); showToast("Profile updated.");
+    });
 
-  elements.userManagementForm.addEventListener("input", (e) => {
-    if (e.target.id === "userComboboxInput") {
-      const q = e.target.value.toLowerCase();
-      const res = document.getElementById("comboboxResults");
-      const items = res.querySelectorAll(".combobox-item");
-      res.classList.remove("hidden");
-      let m = 0; items.forEach(i => { const match = i.dataset.search.includes(q); i.classList.toggle("hidden", !match); if (match) m++; });
-      if (m === 0) res.classList.add("hidden");
-    }
-  });
+    elements.profileForm.addEventListener("click", (e) => {
+      const delBtn = e.target.closest("#deleteProfileBtn");
+      if (delBtn) {
+        if (!confirm("Are you sure you want to permanently delete your account? This action cannot be undone.")) return;
+        const u = getCurrentUser(); if (!u || u.role === "client") return;
+        appState.data.users = appState.data.users.filter(i => i.id !== u.id);
+        appState.currentUserId = null; saveData(); saveSession(); renderAll(); showToast("Account deleted.");
+      }
+    });
+  }
 
-  elements.userManagementForm.addEventListener("click", (e) => {
-    const item = e.target.closest(".combobox-item");
-    if (item) {
-      const input = document.getElementById("userComboboxInput");
-      input.value = item.textContent.split(" • ")[0];
-      document.getElementById("selectedUserId").value = item.dataset.id;
-      document.getElementById("comboboxResults").classList.add("hidden");
-      input.classList.add("selection-made");
-    }
-  });
+  if (elements.userManagementForm) {
+    elements.userManagementForm.addEventListener("input", (e) => {
+      if (e.target.id === "userComboboxInput") {
+        const q = e.target.value.toLowerCase();
+        const res = document.getElementById("comboboxResults");
+        if (!res) return;
+        const items = res.querySelectorAll(".combobox-item");
+        res.classList.remove("hidden");
+        let m = 0; items.forEach(i => { const match = i.dataset.search.includes(q); i.classList.toggle("hidden", !match); if (match) m++; });
+        if (m === 0) res.classList.add("hidden");
+      }
+    });
 
-  elements.userManagementForm.addEventListener("change", (e) => {
-    if (e.target.name === "role") e.target.classList.toggle("selection-made", e.target.value !== "");
-  });
+    elements.userManagementForm.addEventListener("click", (e) => {
+      const item = e.target.closest(".combobox-item");
+      if (item) {
+        const input = document.getElementById("userComboboxInput");
+        if (!input) return;
+        const selectedUserIdInput = document.getElementById("selectedUserId");
+        input.value = item.textContent.split(" - ")[0];
+        if (selectedUserIdInput) selectedUserIdInput.value = item.dataset.id;
+        document.getElementById("comboboxResults")?.classList.add("hidden");
+        input.classList.add("selection-made");
+      }
+    });
+
+    elements.userManagementForm.addEventListener("change", (e) => {
+      if (e.target.name === "role") e.target.classList.toggle("selection-made", e.target.value !== "");
+    });
+  }
 
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".combobox-wrapper")) document.getElementById("comboboxResults")?.classList.add("hidden");
   });
 
-  elements.userManagementForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const userId = document.getElementById("selectedUserId").value;
-    const newRole = new FormData(e.currentTarget).get("role");
-    if (!userId || !newRole) return showToast("Select user and role.");
-    const target = appState.data.users.find(u => u.id === userId);
-    if (target) { target.role = newRole; addNotification(target.id, "Role Update", `You are now a ${newRole}.`); }
-    saveData(); renderAll(); showToast("User role updated.");
-  });
+  if (elements.userManagementForm) {
+    elements.userManagementForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const selectedUserIdInput = document.getElementById("selectedUserId");
+      const userId = selectedUserIdInput ? selectedUserIdInput.value : "";
+      const newRole = new FormData(e.currentTarget).get("role");
+      if (!userId || !newRole) return showToast("Select user and role.");
+      const target = appState.data.users.find(u => u.id === userId);
+      if (target) { target.role = newRole; addNotification(target.id, "Role Update", `You are now a ${newRole}.`); }
+      saveData(); renderAll(); showToast("User role updated.");
+    });
+  }
 
-  elements.userTableBody.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-toggle-status]");
-    if (btn) {
-      const u = appState.data.users.find(i => i.id === btn.dataset.toggleStatus);
-      if (u) { u.status = u.status === "blocked" ? "active" : "blocked"; saveData(); renderAll(); showToast(`User ${u.status}.`); }
-    }
-  });
+  if (elements.userTableBody) {
+    elements.userTableBody.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-toggle-status]");
+      if (btn) {
+        const u = appState.data.users.find(i => i.id === btn.dataset.toggleStatus);
+        if (u) { u.status = u.status === "blocked" ? "active" : "blocked"; saveData(); renderAll(); showToast(`User ${u.status}.`); }
+      }
+    });
+  }
 
-  elements.notificationList.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-delete-notif]");
-    if (btn) {
-      appState.data.notifications = appState.data.notifications.filter(n => n.id !== btn.dataset.deleteNotif);
-      saveData(); renderNotifications(); showToast("Deleted.");
-    }
-  });
+  if (elements.notificationList) {
+    elements.notificationList.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-delete-notif]");
+      if (btn) {
+        appState.data.notifications = appState.data.notifications.filter(n => n.id !== btn.dataset.deleteNotif);
+        saveData(); renderNotifications(); showToast("Deleted.");
+      }
+    });
+  }
 
-  elements.deleteSelectedNotificationsBtn.addEventListener("click", () => {
-    const ids = Array.from(document.querySelectorAll(".notif-checkbox:checked")).map(cb => cb.dataset.notifId);
-    if (!ids.length) return showToast("No items selected.");
-    appState.data.notifications = appState.data.notifications.filter(n => !ids.includes(n.id));
-    saveData(); renderNotifications(); showToast("Selected items deleted.");
-  });
+  if (elements.deleteSelectedNotificationsBtn) {
+    elements.deleteSelectedNotificationsBtn.addEventListener("click", () => {
+      const ids = Array.from(document.querySelectorAll(".notif-checkbox:checked")).map(cb => cb.dataset.notifId);
+      if (!ids.length) return showToast("No items selected.");
+      appState.data.notifications = appState.data.notifications.filter(n => !ids.includes(n.id));
+      saveData(); renderNotifications(); showToast("Selected items deleted.");
+    });
+  }
 
-  window.onscroll = () => { if (window.scrollY > 300) elements.scrollToTopBtn.classList.remove("hidden"); else elements.scrollToTopBtn.classList.add("hidden"); };
-  elements.scrollToTopBtn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  if (elements.scrollToTopBtn) {
+    window.onscroll = () => { if (window.scrollY > 300) elements.scrollToTopBtn.classList.remove("hidden"); else elements.scrollToTopBtn.classList.add("hidden"); };
+    elements.scrollToTopBtn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }
   if (elements.genDetailsReportBtn) {
     elements.genDetailsReportBtn.addEventListener("click", generateDetailsReport);
   }

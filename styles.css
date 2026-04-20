@@ -292,13 +292,15 @@ textarea {
   position: fixed;
   bottom: 30px;
   right: 30px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
+  min-width: 58px;
+  height: 40px;
+  border-radius: 20px;
   background-color: var(--primary);
   color: #fff;
   border: none;
-  font-size: 24px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   display: flex;
@@ -1153,6 +1155,24 @@ td {
   font-size: 15px;
 }
 
+.branded-registration-form select,
+.branded-registration-form textarea {
+  min-height: 48px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 10px 14px;
+  background-color: #fff;
+  font-size: 15px;
+}
+
+.branded-registration-form input:focus,
+.branded-registration-form select:focus,
+.branded-registration-form textarea:focus {
+  outline: none;
+  border-color: #1f4e79;
+  box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.12);
+}
+
 .branded-registration-form input::placeholder {
   color: #9ca3af;
 }
@@ -1182,6 +1202,23 @@ td {
 
 .branded-submit-btn:hover {
   filter: brightness(1.1);
+}
+
+.primary-btn-sm {
+  min-height: 36px;
+  border: 1px solid #1f4e79;
+  background: #1f4e79;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.primary-btn-sm:hover {
+  background: #163754;
 }
 
 /* --- Responsive Design (Media Queries) --- */
@@ -1254,5 +1291,138 @@ td {
   .form-grid-inner {
     grid-template-columns: 1fr !important;
   }
+}
+
+/* --- Landing Page Refresh --- */
+body:not(.auth-page-body) {
+  background:
+    radial-gradient(circle at top left, rgba(31, 78, 121, 0.11), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(176, 138, 74, 0.1), transparent 26%),
+    linear-gradient(135deg, #eef3f9 0%, #f8fafc 100%);
+}
+
+.page-shell {
+  width: 94%;
+  max-width: 1240px;
+  margin: 30px auto 56px;
+}
+
+.page-shell .hero,
+.page-shell .panel {
+  border-radius: 16px;
+  border: 1px solid #dde5ef;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.97);
+}
+
+.page-shell .topbar {
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e7edf5;
+}
+
+.page-shell .main-navbar {
+  margin-top: 14px;
+  border-top: 0;
+  border-bottom: 1px solid #e7edf5;
+  padding: 8px 0 10px;
+}
+
+.page-shell .main-navbar a {
+  border-radius: 999px;
+  border: 1px solid #d7e1ec;
+  background: #f8fbff;
+  color: #1f2d3d;
+  font-weight: 600;
+}
+
+.page-shell .main-navbar a:hover {
+  background: #eaf2ff;
+}
+
+.page-shell .hero-copy h1 {
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  letter-spacing: -0.02em;
+  color: #152033;
+}
+
+.page-shell .hero-text {
+  margin-top: 12px;
+  font-size: 19px;
+  max-width: 65ch;
+  line-height: 1.7;
+  color: #5a6779;
+}
+
+.page-shell .hero-pills span {
+  border-radius: 999px;
+  border: 1px solid #d6e2f0;
+  background: #f5f9ff;
+  color: #23496d;
+  font-weight: 600;
+}
+
+.page-shell .main-grid {
+  grid-template-columns: minmax(340px, 1.05fr) minmax(320px, 1fr);
+  gap: 16px;
+}
+
+.page-shell .dashboard-panel,
+.page-shell .sidebar-panel {
+  grid-column: 1 / -1;
+}
+
+.page-shell .auth-panel .panel-heading h2,
+.page-shell .summary-panel .panel-heading h2,
+.page-shell .sidebar-panel .panel-heading h2,
+.page-shell .dashboard-panel .panel-heading h2 {
+  color: #142030;
+}
+
+.page-shell .tab-btn {
+  border: 1px solid #d4deea;
+  border-radius: 999px;
+  background: #f9fbff;
+  color: #34455b;
+  font-weight: 600;
+}
+
+.page-shell .tab-btn.active {
+  background: #1f4e79;
+  color: #fff;
+  border-color: #1f4e79;
+}
+
+.page-shell .module-list button {
+  border: 1px solid #d7e1ec;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.page-shell .module-list button strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 4px;
+  color: #14253b;
+}
+
+.page-shell input,
+.page-shell select,
+.page-shell textarea {
+  border-radius: 10px;
+  border: 1px solid #cfd9e6;
+}
+
+.page-shell input:focus,
+.page-shell select:focus,
+.page-shell textarea:focus {
+  outline: none;
+  border-color: #1f4e79;
+  box-shadow: 0 0 0 3px rgba(31, 78, 121, 0.14);
+}
+
+.page-shell .dashboard-section {
+  border-radius: 12px;
+  background: #fff;
 }
 

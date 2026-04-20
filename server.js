@@ -51,8 +51,28 @@ app.post("/api/save", async (req, res) => {
   }
 });
 
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(rootDir, "index.html"));
+});
+
+app.get("/login", (_req, res) => {
+  res.sendFile(path.join(rootDir, "login.html"));
+});
+
+app.get("/register", (_req, res) => {
+  res.sendFile(path.join(rootDir, "register.html"));
+});
+
+app.get("/lawyer", (_req, res) => {
+  res.sendFile(path.join(rootDir, "lawyer.html"));
+});
+
 app.get("/assistant", (_req, res) => {
   res.sendFile(path.join(rootDir, "assistant-gate.html"));
+});
+
+app.get("/assistant/dashboard", (_req, res) => {
+  res.sendFile(path.join(rootDir, "assistant.html"));
 });
 
 app.get("/admin", (_req, res) => {

@@ -9,11 +9,11 @@
 <body class="auth-page-body">
   <main class="auth-page-shell">
     <section class="auth-page-card auth-page-card-wide">
-      <a class="auth-back-link" href="index.html">← Back to dashboard</a>
+      <a class="auth-back-link" href="index.html">Back to dashboard</a>
       
       <div class="registration-header-bar" style="margin-top: 20px;">Online Registration</div>
       
-      <p class="auth-page-text" style="margin-bottom: 25px;">Create a client account to access the SASF Law Firm management dashboard.</p>
+      <p class="auth-page-text" style="margin-bottom: 25px;">Create an account to access the SASF Law Firm management dashboard.</p>
 
       <form id="registerPageForm" class="branded-registration-form">
         <div class="form-row-2col">
@@ -30,7 +30,12 @@
           <label><span>Occupation</span><input type="text" name="department" placeholder="Your occupation" required></label>
         </div>
         <div class="form-row-full">
-          <label><span>Default Role</span><input type="text" name="roleLabel" value="Client" readonly class="readonly-input"></label>
+          <label><span>Account Type</span>
+            <select name="role" required>
+              <option value="lawyer">Lawyer</option>
+              <option value="client">Client</option>
+            </select>
+          </label>
         </div>
         <button class="primary-btn branded-submit-btn" type="submit">Complete Registration</button>
       </form>

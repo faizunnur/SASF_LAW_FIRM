@@ -82,11 +82,19 @@ function seedDemoData() {
 }
 
 async function loadData() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    appState.data = JSON.parse(saved);
-  } else {
-    appState.data = seedDemoData();
+  try {
+    const res = await fetch("/api/load");
+    const cloudData = await res.json();
+    if (cloudData) {
+      appState.data = cloudData;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+    } else {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      appState.data = saved ? JSON.parse(saved) : seedDemoData();
+    }
+  } catch (_err) {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    appState.data = saved ? JSON.parse(saved) : seedDemoData();
   }
   
   appState.currentUserId = localStorage.getItem(SESSION_KEY);
@@ -227,8 +235,8 @@ function renderCases() {
       <td><span class="badge ${getStatusBadgeClass(c.status)}">${c.status}</span></td>
       <td>
         <div class="action-btns">
-          <button class="icon-btn edit-case" data-id="${c.id}" title="Edit">✏️</button>
-          <button class="icon-btn delete-case" data-id="${c.id}" title="Delete">🗑️</button>
+          <button class="icon-btn edit-case" data-id="${c.id}" title="Edit">Edit</button>
+          <button class="icon-btn delete-case" data-id="${c.id}" title="Delete">Delete</button>
         </div>
       </td>
     </tr>
@@ -244,8 +252,8 @@ function renderDocuments() {
       <td>${d.updatedOn || "N/A"}</td>
       <td>
         <div class="action-btns">
-          <button class="icon-btn edit-doc" data-id="${d.id}">✏️</button>
-          <button class="icon-btn delete-doc" data-id="${d.id}">🗑️</button>
+          <button class="icon-btn edit-doc" data-id="${d.id}">Edit</button>
+          <button class="icon-btn delete-doc" data-id="${d.id}">Delete</button>
         </div>
       </td>
     </tr>
@@ -307,8 +315,8 @@ function handleTopSearch() {
         <td><span class="badge ${getStatusBadgeClass(c.status)}">${c.status}</span></td>
         <td>
           <div class="action-btns">
-            <button class="icon-btn edit-case" data-id="${c.id}" title="Edit">✏️</button>
-            <button class="icon-btn delete-case" data-id="${c.id}" title="Delete">🗑️</button>
+            <button class="icon-btn edit-case" data-id="${c.id}" title="Edit">Edit</button>
+            <button class="icon-btn delete-case" data-id="${c.id}" title="Delete">Delete</button>
           </div>
         </td>
       </tr>
@@ -327,8 +335,8 @@ function handleTopSearch() {
         <td>${d.updatedOn || "N/A"}</td>
         <td>
           <div class="action-btns">
-            <button class="icon-btn edit-doc" data-id="${d.id}">✏️</button>
-            <button class="icon-btn delete-doc" data-id="${d.id}">🗑️</button>
+            <button class="icon-btn edit-doc" data-id="${d.id}">Edit</button>
+            <button class="icon-btn delete-doc" data-id="${d.id}">Delete</button>
           </div>
         </td>
       </tr>

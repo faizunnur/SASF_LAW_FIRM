@@ -12,12 +12,17 @@
   <div class="page-shell">
     <header class="hero">
       <nav class="topbar">
-        <div class="brand">
-          <span class="brand-mark">SL</span>
+        <div class="brand" style="margin-right: 20px;">
           <div>
             <p class="brand-name">SASF LAW FIRM</p>
           </div>
         </div>
+
+        <!-- Central Navigation -->
+        <div id="userNavLinks"
+          style="display:flex; gap:15px; flex-grow: 1; align-items: center; white-space: nowrap; overflow-x: auto;">
+        </div>
+
         <div class="topbar-actions">
           <div id="clientStatusBadge" class="hidden" style="margin-right: 15px;"></div>
           <button class="ghost-btn hidden" id="logoutBtn" type="button">Logout</button>
@@ -27,7 +32,6 @@
       <nav class="main-navbar" id="siteNav">
         <div class="nav-left">
           <a href="#summarySection" id="navOverview" class="nav-link">Overview</a>
-          <div id="userNavLinks" style="display:flex; gap:10px;"></div>
         </div>
         <div class="nav-right" id="authNavLinks">
           <a href="login.html" class="nav-link auth-link">Login</a>
@@ -36,43 +40,83 @@
       </nav>
 
       <div class="hero-grid">
-        <section class="hero-copy">
-          <h1>Simple law firm management website.</h1>
-          <p class="hero-text">
-            This project shows how a law firm can manage users, cases, appointments, schedules,
-            documents, reports and notifications on the client side.
+        <section class="hero-copy" style="max-width: 600px;">
+          <h1 style="font-size: 3rem; margin-bottom: 20px; line-height: 1.1;">Justice, Integrity, and Excellence.</h1>
+          <p class="hero-text" style="font-size: 1.25rem; opacity: 0.9; margin-bottom: 30px;">
+            At SASF Law Firm, we provide expert legal representation for individuals and businesses. Let our experienced
+            attorneys guide you through your most critical legal challenges.
           </p>
-          <div class="hero-pills">
-            <span>Client</span>
-            <span>Lawyer</span>
-            <span>Assistant</span>
-            <span>Admin</span>
+          <div class="action-row" style="margin-bottom: 40px;">
+            <a class="primary-btn" href="register.html"
+              style="background:#fff; color:var(--primary); font-size: 16px; padding: 14px 28px;">Consult an Expert</a>
+            <a class="ghost-btn" href="login.html"
+              style="color:#fff; border-color: rgba(255,255,255,0.4); font-size: 16px; padding: 14px 28px;">Client
+              Login</a>
           </div>
         </section>
       </div>
     </header>
 
     <main class="main-grid">
-      <section class="panel auth-panel" id="authSection">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">Welcome to SL</p>
-            <h2>Your Legal Journey Starts Here</h2>
+      <!-- Premium Landing Page Features (Visible to Guests) -->
+      <section class="landing-features" id="authSection" style="grid-column: 1 / -1;">
+
+        <div class="text-center" style="margin: 60px 0 40px; text-align: center;">
+          <h2 style="font-size: 2.2rem; margin-bottom: 15px;">Our Practice Areas</h2>
+          <p class="muted">Decades of combined experience across specialized legal domains.</p>
+        </div>
+
+        <div
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-bottom: 60px;">
+
+          <div class="landing-card"
+            style="background:var(--white); padding:30px; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid var(--border);">
+            <div
+              style="width:50px;height:50px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:24px;margin-bottom:20px;">
+              ⚖️</div>
+            <h3 style="margin-bottom:10px;font-size:1.25rem;">Corporate Law</h3>
+            <p style="color:var(--muted);line-height:1.6;">Comprehensive legal solutions for businesses, from formation
+              to contract disputes and mergers.</p>
+          </div>
+
+          <div class="landing-card"
+            style="background:var(--white); padding:30px; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid var(--border);">
+            <div
+              style="width:50px;height:50px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:24px;margin-bottom:20px;">
+              🛡️</div>
+            <h3 style="margin-bottom:10px;font-size:1.25rem;">Criminal Defense</h3>
+            <p style="color:var(--muted);line-height:1.6;">Vigorous representation protecting your rights and freedom
+              against all criminal charges.</p>
+          </div>
+
+          <div class="landing-card"
+            style="background:var(--white); padding:30px; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid var(--border);">
+            <div
+              style="width:50px;height:50px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:24px;margin-bottom:20px;">
+              👨‍👩‍👧</div>
+            <h3 style="margin-bottom:10px;font-size:1.25rem;">Family Law</h3>
+            <p style="color:var(--muted);line-height:1.6;">Compassionate advocacy for divorce, child custody, and family
+              dispute resolution.</p>
+          </div>
+
+        </div>
+
+        <div style="background: #1e293b; color:#fff; padding:60px 40px; border-radius:24px; text-align: center;">
+          <h2 style="font-size: 2rem; margin-bottom: 20px; color:#fff;">Employee Portals</h2>
+          <p style="opacity: 0.8; margin-bottom: 30px; max-width: 600px; margin-left: auto; margin-right: auto;">
+            Authorized personnel only. Access case files, manage appointments, and oversee system operations.</p>
+          <div style="display:flex; gap:15px; justify-content: center; flex-wrap: wrap;">
+            <a href="assistant-gate.html"
+              style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:10px 20px; border-radius:8px; text-decoration: none;">Assistant
+              Access</a>
+            <a href="lawyer.html"
+              style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:10px 20px; border-radius:8px; text-decoration: none;">Lawyer
+              Login</a>
+            <a href="admin-gate.html"
+              style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:10px 20px; border-radius:8px; text-decoration: none;">Administration</a>
           </div>
         </div>
 
-        <div class="auth-view active" id="loginView">
-          <p class="hero-text" style="margin: 0 0 16px; max-width: 70ch;">
-            Use the dedicated pages for sign in and registration. This keeps authentication clean and avoids duplicate
-            login forms.
-          </p>
-          <div class="action-row">
-            <a class="primary-btn" href="login.html">Go to Login</a>
-            <a class="ghost-btn" href="register.html">Create Account</a>
-            <a class="ghost-btn" href="assistant-gate.html">Assistant Portal</a>
-            <a class="ghost-btn" href="admin-gate.html">Admin Portal</a>
-          </div>
-        </div>
       </section>
 
       <section class="panel summary-panel" id="summarySection">
@@ -97,15 +141,6 @@
         </div>
       </section>
 
-      <section class="panel sidebar-panel" id="moduleSection">
-        <div class="panel-heading">
-          <div>
-            <p class="section-kicker">Workspace</p>
-            <h2>Modules</h2>
-          </div>
-        </div>
-        <div class="module-list" id="moduleList"></div>
-      </section>
 
       <section class="panel dashboard-panel" id="dashboardSection">
         <div class="panel-heading">

@@ -258,6 +258,17 @@ function renderModules() {
         </div>
       </button>`).join("");
 
+  const userNavLinks = document.getElementById("userNavLinks");
+  if (userNavLinks) {
+    if (user) {
+      userNavLinks.innerHTML = modules
+        .filter(m => visibleIds.includes(m.id))
+        .map(m => `<a href="#" class="nav-link" data-module-target="${m.id}">${m.title}</a>`).join("");
+    } else {
+      userNavLinks.innerHTML = "";
+    }
+  }
+
   if (user?.role === "admin") {
     elements.adminNav.innerHTML = modules.filter(m => visibleIds.includes(m.id)).map(m => `<button data-module-target="${m.id}" type="button">${m.title}</button>`).join("");
     elements.adminNav.classList.remove("hidden");
@@ -470,7 +481,9 @@ function renderAll() {
   if (summarySec) summarySec.classList.toggle("hidden", !isAdmin);
   if (navOverview) navOverview.classList.toggle("hidden", !isAdmin);
 
-  document.getElementById("moduleSection").classList.toggle("hidden", !isUser || isAdmin);
+  const modSec = document.getElementById("moduleSection");
+  if (modSec) modSec.classList.toggle("hidden", !isUser || isAdmin);
+
   document.getElementById("dashboardSection").classList.toggle("hidden", !isUser);
 
   // Invert logic: Main navbar should be visible to everyone but maybe hidden for specific states
@@ -556,6 +569,17 @@ function bindEvents() {
     elements.moduleList.addEventListener("click", (e) => {
       const b = e.target.closest("[data-module-target]");
       if (b) setActiveModule(b.dataset.moduleTarget);
+    });
+  }
+
+  const unl = document.getElementById("userNavLinks");
+  if (unl) {
+    unl.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-module-target]");
+      if (b) {
+        e.preventDefault();
+        setActiveModule(b.dataset.moduleTarget);
+      }
     });
   }
 

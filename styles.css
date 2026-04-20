@@ -118,6 +118,15 @@ textarea {
   transition: all 0.2s;
 }
 
+.topbar .nav-link {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.topbar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
 .nav-link:hover {
   background: rgba(0, 0, 0, 0.05);
   color: var(--primary);
@@ -1589,6 +1598,7 @@ body:not(.auth-page-body) {
   font-size: 12px;
   font-weight: 700;
 }
+
 /* Module Card Styling */
 .module-list {
   display: grid;
@@ -1626,8 +1636,13 @@ body:not(.auth-page-body) {
   color: #fff;
 }
 
-.module-card.active strong { color: #fff; }
-.module-card.active span { color: rgba(255, 255, 255, 0.8); }
+.module-card.active strong {
+  color: #fff;
+}
+
+.module-card.active span {
+  color: rgba(255, 255, 255, 0.8);
+}
 
 .module-icon {
   width: 56px;
@@ -1671,18 +1686,27 @@ body:not(.auth-page-body) {
 }
 
 @media (max-width: 768px) {
-  .hero-grid, .main-grid, .form-grid-two, .stats-grid, .form-row {
+
+  .hero-grid,
+  .main-grid,
+  .form-grid-two,
+  .stats-grid,
+  .form-row {
     grid-template-columns: 1fr;
   }
+
   .module-list {
     grid-template-columns: 1fr;
   }
+
   .brand-name {
     display: none;
   }
+
   .hero-copy h1 {
     font-size: 24px;
   }
+
   .nav-link {
     padding: 6px 10px;
   }

@@ -17,6 +17,11 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   font-family: "Manrope", "Segoe UI", "Trebuchet MS", "Helvetica Neue", sans-serif;
@@ -39,6 +44,7 @@ h2,
 h3 {
   font-family: "Playfair Display", Georgia, serif;
   letter-spacing: 0.01em;
+  line-height: 1.2;
 }
 
 .hidden {
@@ -94,6 +100,16 @@ h3 {
   font-size: 0.9rem;
 }
 
+#loginForm {
+  display: grid;
+  gap: 12px;
+}
+
+#loginForm .btn {
+  width: 100%;
+  justify-content: center;
+}
+
 /* Generic components */
 .field {
   display: flex;
@@ -117,6 +133,11 @@ textarea {
   font: inherit;
   color: var(--text);
   background: #fff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #8ba0b6;
 }
 
 input:focus,
@@ -180,6 +201,11 @@ textarea:focus {
   font-size: 0.86rem;
 }
 
+textarea {
+  resize: vertical;
+  min-height: 44px;
+}
+
 /* Dashboard layout */
 #dashboardView {
   display: flex;
@@ -210,6 +236,10 @@ textarea:focus {
 
 .topbar h1 {
   font-size: 1.1rem;
+}
+
+#sidebarToggle {
+  display: none;
 }
 
 .user-chip {
@@ -260,6 +290,7 @@ textarea:focus {
 .main-content {
   padding: 18px 20px;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .overview-strip {
@@ -319,11 +350,13 @@ textarea:focus {
   align-items: center;
   gap: 12px;
   margin-bottom: 14px;
+  flex-wrap: wrap;
 }
 
 .row-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .action-inline {
@@ -349,6 +382,18 @@ textarea:focus {
 .form-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+#profileForm,
+#caseCreateForm,
+#documentCreateForm,
+#eventCreateForm {
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f5faff 100%);
 }
 
 .profile-grid {
@@ -380,6 +425,9 @@ textarea:focus {
 
 .table-wrap {
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
 }
 
 table {
@@ -403,6 +451,15 @@ th {
   letter-spacing: 0.03em;
   color: #475569;
   background: #f8fbff;
+}
+
+td .btn {
+  padding: 7px 10px;
+  font-size: 0.8rem;
+}
+
+td .btn + .btn {
+  margin-left: 6px;
 }
 
 .tag {
@@ -549,6 +606,10 @@ th {
   cursor: pointer;
 }
 
+.event-chip:hover {
+  background: #cfe4ff;
+}
+
 .reminder-time {
   color: var(--muted);
   font-size: 0.84rem;
@@ -684,6 +745,7 @@ th {
   position: fixed;
   inset: 0;
   background: rgba(2, 6, 23, 0.48);
+  backdrop-filter: blur(2px);
   display: grid;
   place-items: center;
   padding: 16px;
@@ -693,6 +755,8 @@ th {
 .modal-content {
   width: 100%;
   max-width: 780px;
+  max-height: min(90vh, 880px);
+  overflow-y: auto;
   border-radius: 16px;
   background: #fff;
   border: 1px solid var(--border);
@@ -785,6 +849,10 @@ th {
 }
 
 @media (max-width: 1024px) {
+  #sidebarToggle {
+    display: grid;
+  }
+
   .dashboard-shell {
     grid-template-columns: 1fr;
   }
@@ -807,9 +875,25 @@ th {
   .split-grid {
     grid-template-columns: 1fr;
   }
+
+  .main-content {
+    padding: 16px;
+  }
 }
 
 @media (max-width: 768px) {
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .topbar h1 {
+    font-size: 0.96rem;
+  }
+
+  .topbar-right {
+    gap: 6px;
+  }
+
   .topbar-right .btn {
     padding: 8px 10px;
   }
@@ -834,5 +918,17 @@ th {
 
   .overview-grid {
     grid-template-columns: 1fr;
+  }
+
+  .action-inline {
+    flex-wrap: wrap;
+  }
+
+  .modal {
+    padding: 10px;
+  }
+
+  .modal-content {
+    padding: 12px;
   }
 }

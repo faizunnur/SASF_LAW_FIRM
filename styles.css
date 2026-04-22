@@ -164,14 +164,20 @@ textarea {
   justify-content: center;
 }
 
+.main-navbar .nav-left:empty {
+  display: none;
+}
+
 .nav-link {
   text-decoration: none;
   color: var(--text);
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
 }
 
 .topbar .nav-link {
@@ -183,9 +189,11 @@ textarea {
   color: #fff;
 }
 
-.nav-link:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--primary);
+.nav-link:hover:not(.active) {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .nav-link.highlight {
@@ -306,33 +314,43 @@ textarea {
 }
 
 .status-tag[data-status="active"] {
-  background-color: var(--success-bg);
-  color: var(--success);
-  border-color: #abefc6;
+  background-color: #ecfdf5;
+  color: #065f46;
+  border-color: #6ee7b7;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .status-tag[data-status="blocked"] {
-  background-color: var(--danger-bg);
-  color: var(--danger);
-  border-color: #fca5a5;
+  background-color: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .role-badge[data-role="admin"] {
-  background-color: #eff8ff;
-  color: #175cd3;
-  border-color: #b2ddff;
+  background-color: #1e293b;
+  color: #f1f5f9;
+  border-color: #1e293b;
 }
 
 .role-badge[data-role="lawyer"] {
-  background-color: #f9f5ff;
-  color: #6941c6;
-  border-color: #e9d7fe;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
 }
 
 .role-badge[data-role="assistant"] {
-  background-color: #fffaeb;
-  color: #b54708;
-  border-color: #fedf89;
+  background-color: #fdf4ff;
+  color: #7e22ce;
+  border-color: #e9d5ff;
+}
+
+.role-badge[data-role="client"] {
+  background-color: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
 }
 
 .hero-card,
@@ -381,7 +399,7 @@ textarea {
 .module-list button {
   padding: 10px 20px;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid transparent;
   font-weight: 500;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -453,7 +471,6 @@ textarea {
 .primary-btn {
   background-color: var(--primary);
   color: #fff;
-  border-radius: 4px;
 }
 
 .table-btn[data-toggle-status] {
@@ -476,21 +493,60 @@ textarea {
 }
 
 .danger-action {
-  color: var(--danger);
+  color: #475569;
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.danger-action:hover {
+  background-color: #334155;
+  color: #fff;
+  border-color: #334155;
+}
+
+.notif-delete-btn {
+  color: #dc2626;
   border-color: #fca5a5;
   background-color: #fff1f2;
 }
 
-.danger-action:hover {
-  background-color: #f04438;
+.notif-delete-btn:hover {
+  background-color: #dc2626;
   color: #fff;
-  border-color: #f04438;
+  border-color: #dc2626;
+}
+
+.notif-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  padding: 0 5px;
+  margin-left: 5px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.notif-select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
 }
 
 /* Notification Grid System */
 .notif-grid {
   display: grid;
-  grid-template-columns: 40px 1fr 50px;
+  grid-template-columns: 40px 1fr auto;
   align-items: flex-start;
   gap: 15px;
 }
@@ -517,9 +573,9 @@ textarea {
 }
 
 .notification-card .notif-actions button {
-  width: 40px;
-  height: 40px;
-  padding: 0;
+  width: auto;
+  height: auto;
+  padding: 6px 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -549,6 +605,87 @@ textarea {
   grid-template-columns: 1.2fr 1fr;
   gap: 30px;
   align-items: end;
+}
+
+/* User Management Flow */
+.um-flow {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 20px 0 24px;
+}
+
+.um-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.um-step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.um-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.um-arrow {
+  font-size: 20px;
+  color: #94a3b8;
+  padding-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.um-step-action {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.action-cell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.icon-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid #fca5a5;
+  background: #fff1f2;
+  color: #dc2626;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.icon-delete-btn:hover {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
 }
 
 /* Combobox Styles */
@@ -633,12 +770,14 @@ textarea {
   width: 100%;
   padding: 10px;
   border: 1px solid var(--border);
+  border-radius: 6px;
   background-color: #fff;
 }
 
 .stats-grid {
   grid-template-columns: 1fr 1fr;
   margin-top: 15px;
+  margin-bottom: 15px;
 }
 
 .mini-card h3,
@@ -648,6 +787,10 @@ textarea {
 
 .mini-card h3 {
   font-size: 28px;
+}
+
+#backendStatusBox {
+  margin-top: 15px;
 }
 
 .user-banner {
@@ -683,7 +826,13 @@ textarea {
 .admin-nav-bar button {
   font-size: 13px;
   padding: 8px 14px;
-  border-radius: 4px;
+}
+
+.admin-nav-bar button:hover:not(.active) {
+  background-color: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .admin-nav-bar button.active {
@@ -1580,8 +1729,10 @@ body:not(.auth-page-body) {
 }
 
 .page-shell .session-pill {
-  background: #eaf2ff;
-  color: #204574;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .page-shell .main-navbar {

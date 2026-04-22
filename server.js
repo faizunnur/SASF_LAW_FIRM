@@ -79,6 +79,10 @@ app.get("/admin", (_req, res) => {
   res.sendFile(path.join(rootDir, "admin-gate.html"));
 });
 
+app.get("/admin-dashboard", (_req, res) => {
+  res.sendFile(path.join(rootDir, "index.html"));
+});
+
 app.use((_req, res) => {
   res.sendFile(path.join(rootDir, "index.html"));
 });

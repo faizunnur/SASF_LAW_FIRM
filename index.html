@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SASF LAW FIRM</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 
 <body>
@@ -28,9 +29,6 @@
       </nav>
 
       <nav class="main-navbar" id="siteNav">
-        <div class="nav-left">
-          <a href="#summarySection" id="navOverview" class="nav-link hidden">Overview</a>
-        </div>
         <div class="nav-center dashboard-nav-links" id="userNavLinks"></div>
         <div class="nav-right" id="authNavLinks">
           <a href="login.html" class="nav-link auth-link">Login</a>
@@ -221,8 +219,10 @@
             <div class="section-headline">
               <h3>Secure Inbox</h3>
               <div class="action-row" id="notificationActions">
-                <button class="table-btn danger-action" id="deleteSelectedNotifications" type="button">Clear
-                  Selected</button>
+                <label class="notif-select-all-label">
+                  <input type="checkbox" id="selectAllNotifications"> Select All
+                </label>
+                <button class="table-btn notif-delete-btn" id="deleteSelectedNotifications" type="button">Delete Selected</button>
               </div>
             </div>
             <div id="notificationList" class="card-list"></div>

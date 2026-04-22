@@ -6,11 +6,11 @@ const LAWYER_NAME_KEY = "lawyer_name";
 
 const modules = [
   { id: "profileSection", title: "Profile", text: "View and manage user profile information." },
-  { id: "notificationSection", title: "Inbox", text: "Messages and alerts regarding your cases." },
   { id: "appointmentSection", title: "Book Appointment", text: "Schedule a consultation with our legal team." },
   { id: "clientCaseSection", title: "Case Status", text: "Track your active cases and manage documents." },
   { id: "userManagementSection", title: "User Management", text: "Assign roles, update permissions, and manage all users." },
-  { id: "reportSection", title: "Report Generation", text: "Generate detailed system, transaction, and activity summaries." }
+  { id: "reportSection", title: "Report Generation", text: "Generate detailed system, transaction, and activity summaries." },
+  { id: "notificationSection", title: "Inbox", text: "Messages and alerts regarding your cases." }
 ];
 
 const roleModules = {
@@ -96,10 +96,10 @@ function seedDemoData() {
       { id: "D-900", caseId: "C-1024", ownerId: "u-lawyer", clientId: "u-client", name: "Land Ownership Evidence.pdf", category: "Evidence", updatedOn: "2026-04-02", access: "Client View" }
     ],
     notifications: [
-      { id: "N-1", userId: "u-client", title: "Payment Confirmation Notification", message: "Your appointment payment was confirmed successfully.", date: "2026-04-03" },
-      { id: "N-2", userId: "u-lawyer", title: "Hearing Date Notification", message: "Property dispute hearing scheduled for 18 April 2026.", date: "2026-04-03" },
-      { id: "N-3", userId: "u-assistant", title: "Take Appointment Notification", message: "A client requested a new consultation appointment.", date: "2026-04-03" },
-      { id: "N-4", userId: "u-admin", title: "Profile Verifying Notification", message: "A new account requires verification review.", date: "2026-04-03" }
+      { id: "N-1", userId: "u-client", title: "Payment Confirmation Notification", message: "Your appointment payment was confirmed successfully.", date: "2026-04-03", read: false },
+      { id: "N-2", userId: "u-lawyer", title: "Hearing Date Notification", message: "Property dispute hearing scheduled for 18 April 2026.", date: "2026-04-03", read: false },
+      { id: "N-3", userId: "u-assistant", title: "Take Appointment Notification", message: "A client requested a new consultation appointment.", date: "2026-04-03", read: false },
+      { id: "N-4", userId: "u-admin", title: "Profile Verifying Notification", message: "A new account requires verification review.", date: "2026-04-03", read: false }
     ],
     transactions: [
       { id: "TX-781", client: "Sadia Karim", amount: 250, status: "Confirmed", date: "2026-04-01" },
@@ -158,7 +158,11 @@ async function loadData() {
   const path = window.location.pathname;
 
   if (!user && path !== "/" && !path.includes(".html")) {
-    window.history.replaceState(null, "", "/");
+    if (path === "/admin-dashboard") {
+      window.location.href = "/admin";
+    } else {
+      window.history.replaceState(null, "", "/");
+    }
   }
 
   renderAll();
@@ -213,7 +217,7 @@ window.showConfirmDialog = function ({
   }
 
   elements.confirmModalTitle.textContent = title;
-  elements.confirmModalMessage.textContent = message;
+  elements.confirmModalMessage.innerHTML = message;
   elements.confirmModalApprove.textContent = confirmText;
   elements.confirmModalCancel.textContent = cancelText;
   elements.confirmModal.classList.remove("hidden");
@@ -250,6 +254,7 @@ function addNotification(userId, title, message) {
   appState.data.notifications.unshift({
     id: `N-${Date.now()}`,
     userId,
+    read: false,
     title,
     message,
     date: new Date().toISOString().slice(0, 10)
@@ -311,21 +316,29 @@ function renderModules() {
   const userNavLinks = document.getElementById("userNavLinks");
   if (userNavLinks) {
     if (user) {
-      userNavLinks.innerHTML = modules
+      const userNotifs = user.role === "admin"
+        ? appState.data.notifications
+        : appState.data.notifications.filter(n => n.userId === user.id);
+      const unreadCount = userNotifs.filter(n => !n.read).length;
+
+      const overviewLink = user.role === "admin"
+        ? `<a href="#" id="navOverview" class="nav-link" onclick="event.preventDefault();(function(){const s=document.getElementById('summarySection');const d=document.getElementById('dashboardSection');s.classList.remove('hidden');d.classList.add('hidden');document.querySelectorAll('[data-module-target]').forEach(b=>b.classList.remove('active'));document.getElementById('navOverview').classList.add('active');s.scrollIntoView({behavior:'smooth'});})()">Overview</a>`
+        : "";
+      userNavLinks.innerHTML = overviewLink + modules
         .filter(m => visibleIds.includes(m.id))
-        .map(m => `<a href="#" class="nav-link" data-module-target="${m.id}">${m.title}</a>`).join("");
+        .map(m => {
+          const badge = m.id === "notificationSection" && unreadCount > 0
+            ? `<span class="notif-badge">${unreadCount}</span>`
+            : "";
+          return `<a href="#" class="nav-link" data-module-target="${m.id}">${m.title}${badge}</a>`;
+        }).join("");
     } else {
       userNavLinks.innerHTML = "";
     }
   }
 
   if (elements.adminNav) {
-    if (user?.role === "admin") {
-      elements.adminNav.innerHTML = modules.filter(m => visibleIds.includes(m.id)).map(m => `<button data-module-target="${m.id}" type="button">${m.title}</button>`).join("");
-      elements.adminNav.classList.remove("hidden");
-    } else {
-      elements.adminNav.classList.add("hidden");
-    }
+    elements.adminNav.classList.add("hidden");
   }
   if (!appState.activeModuleId) {
     if (user?.role === "admin") appState.activeModuleId = "userManagementSection";
@@ -386,15 +399,38 @@ function renderClientStatusBadge() {
   elements.clientStatusBadge.classList.remove("hidden");
 }
 
-function setActiveModule(id) {
+function setActiveModule(id, scroll = false) {
   appState.activeModuleId = id;
   const user = getCurrentUser();
   const visibleIds = roleModules[user?.role || "guest"];
+
+  // Mark notifications as read when opening Inbox
+  if (id === "notificationSection" && user) {
+    const changed = appState.data.notifications.some(n =>
+      (user.role === "admin" || n.userId === user.id) && !n.read
+    );
+    if (changed) {
+      appState.data.notifications.forEach(n => {
+        if (user.role === "admin" || n.userId === user.id) n.read = true;
+      });
+      saveData();
+      renderModules(); // refresh badge
+    }
+  }
+
+  // Always hide System Overview and show dashboard when a module is selected
+  document.getElementById("summarySection")?.classList.add("hidden");
+  document.getElementById("dashboardSection")?.classList.remove("hidden");
+  document.getElementById("navOverview")?.classList.remove("active");
+
   document.querySelectorAll("[data-module-target]").forEach(b => b.classList.toggle("active", b.dataset.moduleTarget === id));
   modules.forEach(m => {
     const sec = document.getElementById(m.id);
     if (sec) sec.classList.toggle("hidden", !(visibleIds.includes(m.id) && m.id === id));
   });
+  if (scroll) {
+    document.getElementById("dashboardSection")?.scrollIntoView({ behavior: "smooth" });
+  }
 }
 
 function renderProfileForm() {
@@ -447,7 +483,7 @@ function renderNotifications() {
       <div class="notif-grid">
         <div class="notif-check"><input type="checkbox" class="notif-checkbox" data-notif-id="${n.id}"></div>
         <div class="notif-content"><h4>${n.title}</h4><p>${n.message}</p><div class="meta">${n.date}</div></div>
-        <div class="notif-actions"><button class="table-btn danger-action" data-delete-notif="${n.id}" type="button">Delete</button></div>
+        <div class="notif-actions"><button class="table-btn notif-delete-btn" data-delete-notif="${n.id}" type="button">Delete</button></div>
       </div>
     </article>`).join("") : `<div class="empty-state">No notifications.</div>`;
 }
@@ -455,30 +491,33 @@ function renderNotifications() {
 function renderUserManagementForm() {
   const user = getCurrentUser();
   if (!user || user.role !== "admin") return;
-  const selectables = appState.data.users.filter(u => u.role !== "admin");
+  const selectables = appState.data.users.filter(u => u.role !== "admin" && u.status !== "blocked");
   elements.userManagementForm.innerHTML = `
-    <div class="form-grid-two">
-      <div class="form-grid">
-        <label><span>Find and Select User</span>
-          <div class="combobox-wrapper">
-            <input type="text" id="userComboboxInput" placeholder="Name or email..." class="combobox-input" autocomplete="off">
-            <input type="hidden" name="userId" id="selectedUserId">
-            <div id="comboboxResults" class="combobox-results hidden">
-              ${selectables.map(u => `<div class="combobox-item" data-id="${u.id}" data-search="${u.name.toLowerCase()} ${u.email.toLowerCase()}"><strong>${u.name}</strong> - ${titleCase(u.role)}</div>`).join("")}
-            </div>
+    <div class="um-flow">
+      <div class="um-step">
+        <span class="um-step-label"><span class="um-step-num">1</span> Find &amp; Select User</span>
+        <div class="combobox-wrapper">
+          <input type="text" id="userComboboxInput" placeholder="Name or email..." class="combobox-input" autocomplete="off">
+          <input type="hidden" name="userId" id="selectedUserId">
+          <div id="comboboxResults" class="combobox-results hidden">
+            ${selectables.map(u => `<div class="combobox-item" data-id="${u.id}" data-search="${u.name.toLowerCase()} ${u.email.toLowerCase()}"><strong>${u.name}</strong> - ${titleCase(u.role)}</div>`).join("")}
           </div>
-        </label>
+        </div>
       </div>
-      <div class="form-grid">
-        <label><span>Assign/Update Role</span>
-          <select name="role" required>
-            <option value="">Select new role...</option>
-            <option value="client">Client</option>
-            <option value="lawyer">Lawyer</option>
-            <option value="assistant">Assistant</option>
-          </select>
-        </label>
-        <button class="primary-btn full-width" type="submit">Confirm Role Change</button>
+      <div class="um-arrow">→</div>
+      <div class="um-step">
+        <span class="um-step-label"><span class="um-step-num">2</span> Assign Role</span>
+        <select name="role" required>
+          <option value="">Select new role...</option>
+          <option value="client">Client</option>
+          <option value="lawyer">Lawyer</option>
+          <option value="assistant">Assistant</option>
+        </select>
+      </div>
+      <div class="um-arrow">→</div>
+      <div class="um-step um-step-action">
+        <span class="um-step-label"><span class="um-step-num">3</span> Confirm</span>
+        <button class="primary-btn" type="submit">Confirm Role Change</button>
       </div>
     </div>`;
 }
@@ -490,7 +529,10 @@ function renderUserTable() {
     <tr>
       <td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td><span class="role-badge" data-role="${u.role}">${titleCase(u.role)}</span></td><td>${u.phone}</td>
       <td><span class="status-tag" data-status="${u.status || "active"}">${titleCase(u.status || "active")}</span></td>
-      <td>${u.role !== "admin" ? `<button class="table-btn ${u.status === "blocked" ? "success-action" : "danger-action"}" data-toggle-status="${u.id}">${u.status === "blocked" ? "Enable" : "Disable"}</button>` : "Owner"}</td>
+      <td class="action-cell">${u.role !== "admin"
+        ? `<button class="table-btn ${u.status === "blocked" ? "success-action" : "danger-action"}" data-toggle-status="${u.id}">${u.status === "blocked" ? "Enable" : "Disable"}</button>
+           <button class="icon-delete-btn" data-delete-user="${u.id}" type="button" title="Delete user"><i class="fa-solid fa-trash"></i></button>`
+        : "Owner"}</td>
     </tr>`).join("");
 }
 
@@ -576,23 +618,18 @@ function renderAll() {
   renderUserTable();
 
   const user = getCurrentUser();
-  const isAdmin = user && user.role === "admin";
 
   // Visibility paths
-  const path = window.location.pathname;
-  const isLandingPage = path === "/" || path.includes("index.html");
-  const showDashboard = user && !isLandingPage;
+  const showDashboard = !!user;
 
   // Visibility Logic
   document.getElementById("authSection").classList.toggle("hidden", showDashboard);
   document.querySelector(".hero-grid").classList.toggle("hidden", showDashboard);
   document.getElementById("dashboardSection").classList.toggle("hidden", !showDashboard);
 
-  // System Overview is admin-only, and only inside the dashboard
+  // System Overview hidden by default; shown only when Overview is clicked
   const summarySec = document.getElementById("summarySection");
-  const navOverview = document.getElementById("navOverview");
-  if (summarySec) summarySec.classList.toggle("hidden", !isAdmin || !showDashboard);
-  if (navOverview) navOverview.classList.toggle("hidden", !isAdmin || !showDashboard);
+  if (summarySec) summarySec.classList.add("hidden");
 
   const modSec = document.getElementById("moduleSection");
   if (modSec) modSec.classList.toggle("hidden", true); // Defunct
@@ -644,6 +681,7 @@ function bindEvents() {
       saveSession();
       renderAll();
       showToast(`Access Granted. Welcome back, ${u.name}.`);
+      document.getElementById("dashboardSection")?.scrollIntoView({ behavior: "smooth" });
     });
   }
 
@@ -686,7 +724,7 @@ function bindEvents() {
       const b = e.target.closest("[data-module-target]");
       if (b) {
         e.preventDefault();
-        setActiveModule(b.dataset.moduleTarget);
+        setActiveModule(b.dataset.moduleTarget, true);
       }
     });
   }
@@ -754,24 +792,51 @@ function bindEvents() {
   });
 
   if (elements.userManagementForm) {
-    elements.userManagementForm.addEventListener("submit", (e) => {
+    elements.userManagementForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const selectedUserIdInput = document.getElementById("selectedUserId");
       const userId = selectedUserIdInput ? selectedUserIdInput.value : "";
       const newRole = new FormData(e.currentTarget).get("role");
-      if (!userId || !newRole) return showToast("Select user and role.");
+      if (!userId) return showToast("Please search and select a user first.");
+      if (!newRole) return showToast("Please select a role to assign.");
       const target = appState.data.users.find(u => u.id === userId);
-      if (target) { target.role = newRole; addNotification(target.id, "Role Update", `You are now a ${newRole}.`); }
-      saveData(); renderAll(); showToast("User role updated.");
+      if (!target) return showToast("User not found. Please try again.");
+      if (target.role === newRole) return showToast(`${target.name} is already a ${titleCase(newRole)}.`);
+      const confirmed = await window.showConfirmDialog?.({
+        title: "Confirm Role Change",
+        message: `Change <strong>${target.name}</strong>'s role from <strong>${titleCase(target.role)}</strong> to <strong>${titleCase(newRole)}</strong>?`,
+        confirmText: "Yes, Change Role",
+        cancelText: "Cancel"
+      });
+      if (!confirmed) return;
+      target.role = newRole;
+      addNotification(target.id, "Role Update", `Your account role has been updated to ${titleCase(newRole)} by the administrator.`);
+      saveData(); renderAll(); showToast(`${target.name}'s role updated to ${titleCase(newRole)}.`);
     });
   }
 
   if (elements.userTableBody) {
-    elements.userTableBody.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-toggle-status]");
-      if (btn) {
-        const u = appState.data.users.find(i => i.id === btn.dataset.toggleStatus);
+    elements.userTableBody.addEventListener("click", async (e) => {
+      const toggleBtn = e.target.closest("[data-toggle-status]");
+      if (toggleBtn) {
+        const u = appState.data.users.find(i => i.id === toggleBtn.dataset.toggleStatus);
         if (u) { u.status = u.status === "blocked" ? "active" : "blocked"; saveData(); renderAll(); showToast(`User ${u.status}.`); }
+      }
+
+      const deleteBtn = e.target.closest("[data-delete-user]");
+      if (deleteBtn) {
+        const u = appState.data.users.find(i => i.id === deleteBtn.dataset.deleteUser);
+        if (!u) return;
+        const confirmed = await window.showConfirmDialog?.({
+          title: "Remove this user?",
+          message: `You are about to remove <strong>${u.name}</strong> from the system. They will lose all access and their account will be gone permanently. Are you sure you want to continue?`,
+          confirmText: "Yes, Remove",
+          cancelText: "No, Keep Them"
+        });
+        if (!confirmed) return;
+        appState.data.users = appState.data.users.filter(i => i.id !== u.id);
+        appState.data.notifications = appState.data.notifications.filter(n => n.userId !== u.id);
+        saveData(); renderAll(); showToast(`${u.name} has been deleted.`);
       }
     });
   }
@@ -792,6 +857,13 @@ function bindEvents() {
       if (!ids.length) return showToast("No items selected.");
       appState.data.notifications = appState.data.notifications.filter(n => !ids.includes(n.id));
       saveData(); renderNotifications(); showToast("Selected items deleted.");
+    });
+  }
+
+  const selectAllNotif = document.getElementById("selectAllNotifications");
+  if (selectAllNotif) {
+    selectAllNotif.addEventListener("change", () => {
+      document.querySelectorAll(".notif-checkbox").forEach(cb => { cb.checked = selectAllNotif.checked; });
     });
   }
 

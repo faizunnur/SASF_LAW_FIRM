@@ -28,7 +28,8 @@ const appState = {
   backendStatus: {
     server: "Checking...",
     database: "Waiting for server response..."
-  }
+  },
+  confirmDialog: null
 };
 
 const elements = {
@@ -63,7 +64,12 @@ const elements = {
   reportRangeSelect: document.getElementById("reportRangeSelect"),
   toast: document.getElementById("toast"),
   sessionSummary: document.getElementById("sessionSummary"),
-  clientStatusBadge: document.getElementById("clientStatusBadge")
+  clientStatusBadge: document.getElementById("clientStatusBadge"),
+  confirmModal: document.getElementById("confirmModal"),
+  confirmModalTitle: document.getElementById("confirmModalTitle"),
+  confirmModalMessage: document.getElementById("confirmModalMessage"),
+  confirmModalCancel: document.getElementById("confirmModalCancel"),
+  confirmModalApprove: document.getElementById("confirmModalApprove")
 };
 
 function seedDemoData() {
@@ -180,6 +186,44 @@ function showToast(message) {
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => elements.toast.classList.remove("show"), 2800);
 }
+
+function closeConfirmDialog(result = false) {
+  if (!elements.confirmModal || !appState.confirmDialog) return;
+
+  const { resolve } = appState.confirmDialog;
+  appState.confirmDialog = null;
+  elements.confirmModal.classList.add("hidden");
+  elements.confirmModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+  resolve(result);
+}
+
+window.showConfirmDialog = function ({
+  title = "Please confirm",
+  message = "Are you sure you want to continue?",
+  confirmText = "Confirm",
+  cancelText = "Cancel"
+} = {}) {
+  if (!elements.confirmModal) {
+    return Promise.resolve(window.confirm(message));
+  }
+
+  if (appState.confirmDialog) {
+    appState.confirmDialog.resolve(false);
+  }
+
+  elements.confirmModalTitle.textContent = title;
+  elements.confirmModalMessage.textContent = message;
+  elements.confirmModalApprove.textContent = confirmText;
+  elements.confirmModalCancel.textContent = cancelText;
+  elements.confirmModal.classList.remove("hidden");
+  elements.confirmModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+
+  return new Promise((resolve) => {
+    appState.confirmDialog = { resolve };
+  });
+};
 
 function clearLawyerDashboardSession() {
   localStorage.removeItem(LAWYER_TOKEN_KEY);
@@ -755,6 +799,20 @@ function bindEvents() {
     window.onscroll = () => { if (window.scrollY > 300) elements.scrollToTopBtn.classList.remove("hidden"); else elements.scrollToTopBtn.classList.add("hidden"); };
     elements.scrollToTopBtn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
+  if (elements.confirmModal) {
+    elements.confirmModal.addEventListener("click", (e) => {
+      if (e.target.closest("[data-confirm-close]")) closeConfirmDialog(false);
+    });
+  }
+  if (elements.confirmModalCancel) {
+    elements.confirmModalCancel.addEventListener("click", () => closeConfirmDialog(false));
+  }
+  if (elements.confirmModalApprove) {
+    elements.confirmModalApprove.addEventListener("click", () => closeConfirmDialog(true));
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && appState.confirmDialog) closeConfirmDialog(false);
+  });
   if (elements.genDetailsReportBtn) {
     elements.genDetailsReportBtn.addEventListener("click", generateDetailsReport);
   }

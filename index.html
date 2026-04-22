@@ -364,6 +364,21 @@
     </main>
   </div>
 
+  <div id="confirmModal" class="confirm-modal hidden" aria-hidden="true">
+    <div class="confirm-modal-backdrop" data-confirm-close></div>
+    <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+      <div class="confirm-modal-accent"></div>
+      <div class="confirm-modal-icon">!</div>
+      <p class="confirm-modal-kicker">Please Confirm</p>
+      <h3 id="confirmModalTitle">Are you sure?</h3>
+      <p id="confirmModalMessage" class="confirm-modal-message">This action needs your confirmation.</p>
+      <div class="confirm-modal-actions">
+        <button id="confirmModalCancel" class="ghost-btn confirm-secondary-btn" type="button">Keep It</button>
+        <button id="confirmModalApprove" class="primary-btn confirm-primary-btn" type="button">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" aria-live="polite"></div>
   <button id="scrollToTopBtn" class="scroll-top-btn hidden" type="button" aria-label="Scroll to top">Top</button>
   <script src="script.js"></script>

@@ -228,7 +228,13 @@
   }
 
   window.cancelAppointment = async function (id) {
-    if (!confirm("Are you sure you want to cancel this appointment?")) return;
+    const approved = await window.showConfirmDialog?.({
+      title: "Cancel Appointment?",
+      message: "This pending appointment request will be removed from your schedule.",
+      confirmText: "Yes, Cancel It",
+      cancelText: "Keep Booking"
+    });
+    if (!approved) return;
     appState.data.appointments = appState.data.appointments.filter(a => a.id !== id);
     await saveData();
     renderAll();
@@ -249,7 +255,13 @@
   };
 
   window.deleteDocument = async function (id) {
-    if (!confirm("Remove this document?")) return;
+    const approved = await window.showConfirmDialog?.({
+      title: "Delete Document?",
+      message: "This uploaded file will be removed from the selected case.",
+      confirmText: "Delete Document",
+      cancelText: "Keep Document"
+    });
+    if (!approved) return;
     appState.data.documents = appState.data.documents.filter(d => d.id !== id);
     await saveData();
     renderClientDocuments(appState.selectedCaseId);

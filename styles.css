@@ -516,13 +516,21 @@ textarea {
   justify-content: flex-end;
 }
 
-.notif-actions button {
+.notification-card .notif-actions button {
   width: 40px;
   height: 40px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.client-card-actions button {
+  width: auto;
+  height: auto;
+  min-width: 96px;
+  padding: 10px 16px;
+  white-space: nowrap;
 }
 
 .notification-card {
@@ -1649,6 +1657,14 @@ body:not(.auth-page-body) {
 
 .primary-btn-sm:hover {
   filter: brightness(1.1);
+}
+
+.danger-btn-sm {
+  background-color: var(--danger);
+}
+
+.danger-btn-sm:hover {
+  background-color: #dc2626;
 }
 
 #documentManagement {

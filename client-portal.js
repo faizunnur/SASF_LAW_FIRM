@@ -67,8 +67,8 @@
               ${a.status === 'Pending' ? 'Waiting for assistant review and confirmation.' : 'Confirmed by the office team and ready for follow-up.'}
             </p>
           </div>
-          <div class="notif-actions" style="margin-top: 10px;">
-            ${a.status === 'Pending' ? `<button class="primary-btn-sm" style="background-color: var(--danger);" onclick="cancelAppointment('${a.id}')">Cancel</button>` : ''}
+          <div class="notif-actions client-card-actions" style="margin-top: 10px;">
+            ${a.status === 'Pending' ? `<button class="primary-btn-sm danger-btn-sm" onclick="cancelAppointment('${a.id}')">Cancel</button>` : ''}
           </div>
         </div>
       </article>
@@ -101,7 +101,7 @@
             </p>
             <div class="meta">Status: <span class="status-tag" data-status="${c.status.toLowerCase().replace(' ', '-')}">${c.status}</span></div>
           </div>
-          <div class="notif-actions">
+          <div class="notif-actions client-card-actions">
             <button class="primary-btn-sm">View Documents</button>
           </div>
         </div>

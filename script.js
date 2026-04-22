@@ -21,6 +21,19 @@ const roleModules = {
   admin: ["profileSection", "notificationSection", "userManagementSection", "reportSection"]
 };
 
+// Maps section ID → URL slug
+const moduleSlug = {
+  profileSection: "profile",
+  notificationSection: "inbox",
+  appointmentSection: "book-appointment",
+  clientCaseSection: "case-status",
+  userManagementSection: "user-management",
+  reportSection: "report-generation"
+};
+
+// Maps URL slug → section ID (reverse)
+const slugModule = Object.fromEntries(Object.entries(moduleSlug).map(([k, v]) => [v, k]));
+
 const appState = {
   data: null,
   currentUserId: null,
@@ -153,15 +166,27 @@ async function loadData() {
 
   appState.currentUserId = localStorage.getItem(SESSION_KEY) || null;
 
-  // URL Cleanup: Enforce strict path-based visibility
   const user = getCurrentUser();
   const path = window.location.pathname;
 
+  // Redirect unauthenticated users
   if (!user && path !== "/" && !path.includes(".html")) {
-    if (path === "/admin-dashboard") {
+    if (path.startsWith("/admin")) {
       window.location.href = "/admin";
     } else {
       window.history.replaceState(null, "", "/");
+    }
+    return;
+  }
+
+  // Restore active module from URL path (e.g. /admin/profile → profileSection)
+  if (user) {
+    const parts = path.split("/").filter(Boolean); // ["admin", "profile"]
+    const slug = parts[1]; // "profile"
+    if (slug && slug !== "overview" && slugModule[slug]) {
+      appState.activeModuleId = slugModule[slug];
+    } else if (slug === "overview" && user.role === "admin") {
+      appState.activeModuleId = null; // will show summarySection
     }
   }
 
@@ -185,7 +210,7 @@ function getCurrentUser() { return appState.data.users.find((user) => user.id ==
 function titleCase(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
 
 function showToast(message) {
-  elements.toast.textContent = message;
+  elements.toast.innerHTML = `<span class="toast-icon">&#10003;</span><span class="toast-msg">${message}</span>`;
   elements.toast.classList.add("show");
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => elements.toast.classList.remove("show"), 2800);
@@ -322,7 +347,7 @@ function renderModules() {
       const unreadCount = userNotifs.filter(n => !n.read).length;
 
       const overviewLink = user.role === "admin"
-        ? `<a href="#" id="navOverview" class="nav-link" onclick="event.preventDefault();(function(){const s=document.getElementById('summarySection');const d=document.getElementById('dashboardSection');s.classList.remove('hidden');d.classList.add('hidden');document.querySelectorAll('[data-module-target]').forEach(b=>b.classList.remove('active'));document.getElementById('navOverview').classList.add('active');s.scrollIntoView({behavior:'smooth'});})()">Overview</a>`
+        ? `<a href="#" id="navOverview" class="nav-link" onclick="event.preventDefault();(function(){const s=document.getElementById('summarySection');const d=document.getElementById('dashboardSection');s.classList.remove('hidden');d.classList.add('hidden');document.querySelectorAll('[data-module-target]').forEach(b=>b.classList.remove('active'));document.getElementById('navOverview').classList.add('active');window.history.pushState(null,'','/admin/overview');s.scrollIntoView({behavior:'smooth'});})()">Overview</a>`
         : "";
       userNavLinks.innerHTML = overviewLink + modules
         .filter(m => visibleIds.includes(m.id))
@@ -403,6 +428,14 @@ function setActiveModule(id, scroll = false) {
   appState.activeModuleId = id;
   const user = getCurrentUser();
   const visibleIds = roleModules[user?.role || "guest"];
+
+  // Update URL to reflect current module
+  if (user && moduleSlug[id]) {
+    const role = user.role === "admin" ? "admin" : user.role === "client" ? "client" : null;
+    if (role) {
+      window.history.pushState(null, "", `/${role}/${moduleSlug[id]}`);
+    }
+  }
 
   // Mark notifications as read when opening Inbox
   if (id === "notificationSection" && user) {
@@ -648,9 +681,14 @@ function renderAll() {
   document.querySelector(".hero-grid").classList.toggle("hidden", showDashboard);
   document.getElementById("dashboardSection").classList.toggle("hidden", !showDashboard);
 
-  // System Overview hidden by default; shown only when Overview is clicked
+  // Show System Overview if URL is /admin/overview, otherwise hide it
   const summarySec = document.getElementById("summarySection");
-  if (summarySec) summarySec.classList.add("hidden");
+  const isOverviewPath = window.location.pathname === "/admin/overview";
+  if (summarySec) summarySec.classList.toggle("hidden", !isOverviewPath);
+  if (isOverviewPath) {
+    document.getElementById("dashboardSection")?.classList.add("hidden");
+    document.getElementById("navOverview")?.classList.add("active");
+  }
 
   const modSec = document.getElementById("moduleSection");
   if (modSec) modSec.classList.toggle("hidden", true); // Defunct
@@ -918,4 +956,20 @@ loadData().then(() => {
   bindEvents();
   renderAll();
   fetchBackendStatus();
+});
+
+// Handle browser back/forward
+window.addEventListener("popstate", () => {
+  const user = getCurrentUser();
+  if (!user) return;
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  const slug = parts[1];
+  if (slug === "overview") {
+    document.getElementById("summarySection")?.classList.remove("hidden");
+    document.getElementById("dashboardSection")?.classList.add("hidden");
+    document.querySelectorAll("[data-module-target]").forEach(b => b.classList.remove("active"));
+    document.getElementById("navOverview")?.classList.add("active");
+  } else if (slug && slugModule[slug]) {
+    setActiveModule(slugModule[slug]);
+  }
 });

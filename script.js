@@ -61,7 +61,9 @@ const elements = {
   genDetailsReportBtn: document.getElementById("genDetailsReportBtn"),
   genTransReportBtn: document.getElementById("genTransReportBtn"),
   reportRangeSelect: document.getElementById("reportRangeSelect"),
-  toast: document.getElementById("toast")
+  toast: document.getElementById("toast"),
+  sessionSummary: document.getElementById("sessionSummary"),
+  clientStatusBadge: document.getElementById("clientStatusBadge")
 };
 
 function seedDemoData() {
@@ -281,9 +283,63 @@ function renderModules() {
       elements.adminNav.classList.add("hidden");
     }
   }
-  if (!appState.activeModuleId) appState.activeModuleId = user?.role === "admin" ? "userManagementSection" : (visibleIds[0] || "profileSection");
+  if (!appState.activeModuleId) {
+    if (user?.role === "admin") appState.activeModuleId = "userManagementSection";
+    else if (user?.role === "client") appState.activeModuleId = "appointmentSection";
+    else appState.activeModuleId = visibleIds[0] || "profileSection";
+  }
   if (!visibleIds.includes(appState.activeModuleId)) appState.activeModuleId = visibleIds[0] || "profileSection";
   setActiveModule(appState.activeModuleId);
+}
+
+function renderSessionSummary() {
+  if (!elements.sessionSummary) return;
+  const user = getCurrentUser();
+
+  if (!user) {
+    elements.sessionSummary.textContent = "";
+    elements.sessionSummary.classList.add("hidden");
+    return;
+  }
+
+  const portalLabel = {
+    client: "Client Workspace",
+    assistant: "Assistant Workspace",
+    lawyer: "Lawyer Workspace",
+    admin: "Admin Workspace"
+  }[user.role] || "User Workspace";
+
+  elements.sessionSummary.innerHTML = `
+    <span class="session-pill">${titleCase(user.role)}</span>
+    <div>
+      <strong>${portalLabel}</strong>
+      <span>${user.name}</span>
+    </div>
+  `;
+  elements.sessionSummary.classList.remove("hidden");
+}
+
+function renderClientStatusBadge() {
+  if (!elements.clientStatusBadge) return;
+  const user = getCurrentUser();
+
+  if (!user || user.role !== "client") {
+    elements.clientStatusBadge.textContent = "";
+    elements.clientStatusBadge.classList.add("hidden");
+    return;
+  }
+
+  const appointments = (appState.data.appointments || []).filter((appt) => appt.clientId === user.id);
+  const pendingCount = appointments.filter((appt) => appt.status === "Pending").length;
+  const confirmedCount = appointments.filter((appt) => appt.status === "Confirmed").length;
+
+  elements.clientStatusBadge.textContent = pendingCount
+    ? `${pendingCount} booking pending assistant review`
+    : confirmedCount
+      ? `${confirmedCount} confirmed appointment${confirmedCount > 1 ? "s" : ""}`
+      : "Ready to request a consultation";
+
+  elements.clientStatusBadge.classList.remove("hidden");
 }
 
 function setActiveModule(id) {
@@ -468,6 +524,8 @@ function renderAll() {
   renderBackendStatus();
   renderUserBanner();
   renderModules();
+  renderSessionSummary();
+  renderClientStatusBadge();
   renderProfileForm();
   renderNotifications();
   renderUserManagementForm();

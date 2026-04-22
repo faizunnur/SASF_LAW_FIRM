@@ -19,9 +19,7 @@
         </div>
 
         <!-- Central Navigation -->
-        <div id="userNavLinks"
-          style="display:flex; gap:15px; flex-grow: 1; align-items: center; white-space: nowrap; overflow-x: auto;">
-        </div>
+        <div id="sessionSummary" class="session-summary hidden"></div>
 
         <div class="topbar-actions">
           <div id="clientStatusBadge" class="hidden" style="margin-right: 15px;"></div>
@@ -33,6 +31,7 @@
         <div class="nav-left">
           <a href="#summarySection" id="navOverview" class="nav-link">Overview</a>
         </div>
+        <div class="nav-center dashboard-nav-links" id="userNavLinks"></div>
         <div class="nav-right" id="authNavLinks">
           <a href="login.html" class="nav-link auth-link">Login</a>
           <a href="register.html" class="nav-link auth-link highlight">Register</a>
@@ -279,7 +278,10 @@
 
             <div id="documentManagement" class="hidden mt-20">
               <div class="section-headline">
-                <h3>Case Documents</h3>
+                <div>
+                  <h3>Case Documents</h3>
+                  <p id="selectedCaseSummary" class="meta">Select a case to review its file requirements and uploaded documents.</p>
+                </div>
                 <button class="primary-btn-sm" id="uploadDocBtn">Add New Document</button>
               </div>
               <div class="table-wrap">

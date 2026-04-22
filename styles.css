@@ -95,6 +95,48 @@ textarea {
   justify-content: space-between;
 }
 
+.session-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.session-summary strong,
+.session-summary span {
+  display: block;
+  white-space: nowrap;
+}
+
+.session-summary strong {
+  font-size: 14px;
+}
+
+.session-summary span {
+  font-size: 12px;
+  opacity: 0.88;
+}
+
+.session-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .main-navbar {
   margin-top: 20px;
   padding: 10px;
@@ -106,6 +148,20 @@ textarea {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.main-navbar .nav-left,
+.main-navbar .nav-center,
+.main-navbar .nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.main-navbar .nav-center {
+  flex: 1;
+  justify-content: center;
 }
 
 .nav-link {
@@ -139,6 +195,12 @@ textarea {
 
 .nav-link.highlight:hover {
   background: var(--primary-hover);
+  color: #fff;
+}
+
+.main-navbar .nav-link.active {
+  background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
 }
 
@@ -1379,6 +1441,22 @@ body:not(.auth-page-body) {
   border-bottom: 1px solid #e7edf5;
 }
 
+.page-shell .session-summary {
+  border-color: #d7e1ec;
+  background: #f8fbff;
+  color: #1f2d3d;
+}
+
+.page-shell .session-summary span {
+  color: #607086;
+  opacity: 1;
+}
+
+.page-shell .session-pill {
+  background: #eaf2ff;
+  color: #204574;
+}
+
 .page-shell .main-navbar {
   margin-top: 14px;
   border-top: 0;
@@ -1396,6 +1474,10 @@ body:not(.auth-page-body) {
 
 .page-shell .main-navbar a:hover {
   background: #eaf2ff;
+}
+
+.dashboard-nav-links:empty {
+  display: none;
 }
 
 .page-shell .hero-copy h1 {
@@ -1703,11 +1785,24 @@ body:not(.auth-page-body) {
     display: none;
   }
 
+  .session-summary {
+    width: 100%;
+    order: 3;
+  }
+
   .hero-copy h1 {
     font-size: 24px;
   }
 
   .nav-link {
     padding: 6px 10px;
+  }
+
+  .main-navbar {
+    justify-content: center;
+  }
+
+  .main-navbar .nav-center {
+    justify-content: flex-start;
   }
 }

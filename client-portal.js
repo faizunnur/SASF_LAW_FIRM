@@ -59,7 +59,13 @@
           <div class="notif-content">
             <h4>${a.type} Consultation</h4>
             <p style="margin:4px 0;">Scheduled for <br><strong>${a.date} at ${a.time}</strong></p>
-            <div class="meta" style="margin-top: 8px;">Status: <span class="status-tag" data-status="${a.status.toLowerCase()}">${a.status}</span></div>
+            <div class="meta" style="margin-top: 8px;">
+              Status: <span class="status-tag" data-status="${a.status.toLowerCase()}">${a.status}</span>
+              <span style="margin-left: 8px;">Payment: ${a.payment || 'Pending'}</span>
+            </div>
+            <p class="meta" style="margin-top: 8px;">
+              ${a.status === 'Pending' ? 'Waiting for assistant review and confirmation.' : 'Confirmed by the office team and ready for follow-up.'}
+            </p>
           </div>
           <div class="notif-actions" style="margin-top: 10px;">
             ${a.status === 'Pending' ? `<button class="primary-btn-sm" style="background-color: var(--danger);" onclick="cancelAppointment('${a.id}')">Cancel</button>` : ''}
@@ -87,6 +93,12 @@
           <div class="notif-content">
             <h4>Case: ${c.title}</h4>
             <p>Type: <strong>${c.type}</strong> | Lawyer: ${getLawyerName(c.lawyerId)}</p>
+            <p class="meta" style="margin: 8px 0 0;">
+              ${c.notes || 'Case notes will appear here after the legal team reviews your matter.'}
+            </p>
+            <p class="meta" style="margin: 8px 0 0;">
+              Hearing Date: <strong>${c.hearingDate || 'To be scheduled'}</strong> | Documents: <strong>${getCaseDocumentCount(c.id)}</strong>
+            </p>
             <div class="meta">Status: <span class="status-tag" data-status="${c.status.toLowerCase().replace(' ', '-')}">${c.status}</span></div>
           </div>
           <div class="notif-actions">
@@ -102,9 +114,20 @@
     return lawyer ? lawyer.name : "Assigning...";
   }
 
+  function getCaseDocumentCount(caseId) {
+    return appState.data.documents.filter(d => d.caseId === caseId).length;
+  }
+
   window.selectCase = function (caseId) {
     appState.selectedCaseId = caseId;
     const docSection = document.getElementById("documentManagement");
+    const caseData = appState.data.cases.find(c => c.id === caseId);
+    const selectedCaseSummary = document.getElementById("selectedCaseSummary");
+
+    if (selectedCaseSummary && caseData) {
+      selectedCaseSummary.textContent = `${caseData.type} case with ${getLawyerName(caseData.lawyerId)}. Upload, rename, or remove your own supporting files here.`;
+    }
+
     docSection.classList.remove("hidden");
     renderClientDocuments(caseId);
 

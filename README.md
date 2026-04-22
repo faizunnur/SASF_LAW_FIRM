@@ -1,79 +1,80 @@
-# CaseCloud: Legal Case & Document Organizer
+# SASF Law Firm | Smart Assistant & Solicitor Framework
 
-CaseCloud is a modern, web-based management system for law firms. It provides a robust, role-based platform for administrators, legal assistants, lawyers, and clients to collaborate on cases, manage documents, and schedule appointments.
+SASF Law Firm is a premium, role-based legal management platform designed for high-efficiency collaboration between clients, legal assistants, lawyers, and administrators.
 
 ## 🏛️ System Architecture
 
-- **Frontend**: Vanilla HTML5, CSS3 (Custom Design System), and JavaScript.
-- **Backend**: Node.js & Express (API layer).
-- **Database**: SQL-based (Neon/PostgreSQL) with LocalStorage fallback for offline capability.
-- **Security**: Role-Based Access Control (RBAC) with session management.
+The project follows a modular **Client-Server** architecture for scalability and security.
 
-## 👥 Roles and Tasks
+- **Frontend (`/client`)**: Role-isolated modules for Admin, Assistant, Lawyer, and Client.
+  - **Shared Assets**: Centralized authentication (`auth.js`), global styles (`styles.css`), and common logic.
+- **Backend (`/server`)**: Node.js & Express API with role-based data filtering.
+- **Database**: PostgreSQL (via Neon) for persistent state management with LocalStorage synchronization.
 
-The system is defined by four distinct user roles, each with specialized dashboards and workflows.
+## 👥 Roles and Workflows
 
-### 1. Administrator
-The Administrator oversees the entire system and manages the firm's operations.
-- **User Management**: Add, update, and disable user accounts.
-- **Role Assignment**: Assign and update roles (Client, Assistant, Lawyer).
-- **System Overview**: Monitor active sessions and system health.
-- **Reporting**: Generate detailed transaction and activity reports.
-- **Global Notifications**: View and manage all system-wide alerts.
+### 1. Client Portal
+Clients can seamlessly interact with the firm through a dedicated interface.
+- **Case Category Selection**: Choose from 12 specialized practice areas (Criminal, Family, Corporate, etc.).
+- **Unassigned Booking**: Book appointments that enter a specialty pool for expert claiming.
+- **Real-time Tracking**: Monitor case status and upcoming hearing dates instantly.
 
-### 2. Assistant
-The Assistant supports the legal team by handling the administrative lifecycle of legal cases.
-- **Command Center Dashboard**: Personalized overview of assigned cases, recent documents, and pending appointments.
-- **Lawyer Directory**: Integrated access to the firm's legal counsel roster with search and filter capabilities.
-- **Global Search**: Persistent header search bar for instant access to cases, documents, and lawyers.
-- **Case Lifecycle Management**: Create, update, and manage case statuses with automatic assistant attribution.
-- **Appointment Handling**: Review appointment requests, verify payments, and confirm schedules.
-- **Document Repository**: Manage the document library (uploads, updates, deletions).
+### 2. Assistant Dashboard (Amber Theme)
+Assistants act as the primary intake and management layer, working under specific lawyers.
+- **Specialty-Based Claiming**: Assistants see and claim unassigned appointments matching their legal specialty.
+- **Lawyer Collaboration**: View the assigned Lawyer's schedule directly to manage task delegation.
+- **Case Proposal System**: Verify payments and "Propose" cases to Lawyers for final acceptance.
+- **Status Management**: Update case progress visible to clients in real-time.
 
-### 3. Lawyer
-Lawyers focus on case details and represent clients in legal proceedings.
-- **Case Review**: Access detailed information for assigned cases.
-- **Schedule Management**: Track hearing dates, deadlines, and consultations.
-- **Notifications**: Stay updated on new case assignments and scheduling changes.
-- **Documentation**: Access and review legal evidence and contracts.
+### 3. Lawyer Dashboard
+Lawyers focus on legal strategy and case representation.
+- **Case Request Pool**: Review and "Accept" new case proposals sent by their Assistants.
+- **Schedule Integrity**: Integrated calendar for managing hearings, meetings, and deadlines.
+- **Full Case Oversight**: Access to all documents and case notes synchronized with their assistant.
 
-### 4. Client
-Clients interact with the firm to track their legal matters.
-- **Status Tracking**: Monitor the live status of their active cases.
-- **Appointment Management**: View confirmed consultations and hearing reminders.
-- **Notifications**: Receive instant alerts for payment confirmations and case updates.
-- **Profile Security**: Manage personal information and login credentials.
+### 4. Admin Command Center
+- **System Governance**: Manage user accounts and role permissions.
+- **Operational Reporting**: Generate transaction logs and activity reports.
+- **Verification Logic**: Oversee account registrations and security.
+
+## 🛠️ Key Features
+
+- **Dynamic Filtering**: Assistant registration is context-aware; selecting a category filters available lawyers to those specializing in that field.
+- **Premium UI/UX**: Distinctive color systems for different roles (e.g., **Amber Yellow** for Assistants) with modern glassmorphism and micro-animations.
+- **Role Isolation**: Filtered API endpoints ensure that Lawyers and Assistants only see data relevant to their specific partnership.
+- **Security**: Password visibility toggles, confirmation validation, and role-based access control.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js installed on your machine.
-- Neon PostgreSQL connection string (configure in `.env`).
+- Node.js (Latest LTS)
+- Neon PostgreSQL connection string
 
 ### Installation
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   ```
-2. Install dependencies:
+1. Clone the repository and install dependencies:
    ```bash
    npm install
    ```
-3. Configure Environment:
-   Create a `.env` file with your `DATABASE_URL` and `PORT`.
+2. Configure `.env`:
+   ```env
+   DATABASE_URL=your_neon_sql_url
+   PORT=3000
+   ```
+3. Start the server:
+   ```bash
+   npm start
+   ```
 
-### Running the Project
-- **Production/Server Mode**:
-  ```bash
-  npm start
-  ```
-  The app will be available at `http://localhost:3000`.
-
-- **Hybrid Synchronization**:
-  The system automatically synchronizes data between the browser's LocalStorage and the Cloud SQL database for high availability and offline resilience.
-
-## 🛠️ Technology Stack
-- **Styling**: Premium custom CSS with a focus on glassmorphism, responsive grids, and modern typography.
-- **Database**: SQL-based (Neon/PostgreSQL) with a robust synchronization layer for multi-tab consistency.
-- **Search**: Real-time context-aware global search integrated into the dashboard header.
-- **Icons**: Emoji-based iconography for lightweight, framework-free visual cues.
+## ⚖️ Legal Practice Categories
+1. Criminal Law
+2. Civil Law
+3. Family Law
+4. Corporate / Business Law
+5. Property / Real Estate Law
+6. Labor & Employment Law
+7. Intellectual Property (IP) Law
+8. Tax Law
+9. Immigration Law
+10. Cyber Law / IT Law
+11. Environmental Law
+12. Constitutional / Administrative Law

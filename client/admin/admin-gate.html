@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal | SASF LAW FIRM</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    .admin-auth-card {
+      border-top: 5px solid var(--primary);
+    }
+    .admin-gate-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      background: #fef2f2;
+      color: #991b1b;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .security-notice {
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 10px;
+      border-left: 3px solid #64748b;
+      margin-top: 25px;
+      font-size: 13px;
+      color: #475569;
+    }
+  </style>
+</head>
+<body class="auth-page-body">
+  <main class="auth-page-shell">
+    <section class="auth-page-card admin-auth-card">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="/uploads/logo.png" alt="SASF Logo" style="width: 80px; border-radius: 8px; margin-bottom: 10px;">
+        <h1 style="font-size: 22px; font-weight: 800; color: #1e293b; margin: 0;">SASF LAW FIRM</h1>
+        <p style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">Your Legal Partner</p>
+      </div>
+
+      <div class="admin-gate-badge">Restricted Access</div>
+      
+      <p class="auth-page-text" style="margin-bottom: 30px;">
+        Authorized access only. Please provide your administrative credentials to manage system users, roles, and financial reports.
+      </p>
+
+      <!-- Admin Login Form -->
+      <form id="loginPageForm" class="branded-registration-form">
+        <div class="form-row-full">
+          <label><span>Admin Email</span><input type="email" name="email" placeholder="asif@gmail.com" required></label>
+        </div>
+        <div class="form-row-full">
+          <label><span>Security Password</span><input type="password" name="password" placeholder="********" required></label>
+        </div>
+        <button class="primary-btn branded-submit-btn" style="background: #162033;" type="submit">Initialize Admin Session</button>
+      </form>
+
+      <div class="security-notice">
+        <strong>Security Notice:</strong> All administrative activities are logged. Unauthorized access attempts will be blocked and reported to system security.
+      </div>
+
+      <p class="auth-feedback" id="authFeedback" aria-live="polite" style="margin-top: 20px; text-align: center;"></p>
+    </section>
+  </main>
+
+  <script src="/auth.js"></script>
+</body>
+</html>

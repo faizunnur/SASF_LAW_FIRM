@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register | SASF LAW FIRM</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="auth-page-body">
+  <main class="auth-page-shell">
+    <section class="auth-page-card auth-page-card-wide">
+      <a class="auth-back-link" href="/">Back to dashboard</a>
+      
+      <div class="registration-header-bar" style="margin-top: 20px;">Online Registration</div>
+      
+      <p class="auth-page-text" style="margin-bottom: 25px;">Create an account to access the SASF Law Firm management dashboard.</p>
+
+      <form id="registerPageForm" class="branded-registration-form">
+        <div class="form-row-2col">
+          <label><span>Full Name</span><input type="text" name="name" placeholder="Full name" required></label>
+          <label><span>Phone Number</span><input type="text" name="phone" placeholder="Phone number" required></label>
+        </div>
+        <div class="form-row-full">
+          <label><span>Email Address</span><input type="email" name="email" placeholder="Email address" required></label>
+        </div>
+        <div class="form-row-full">
+          <label><span>Password</span><input type="password" name="password" placeholder="Create password" required></label>
+        </div>
+        <div class="form-row-full">
+          <label><span>Occupation</span><input type="text" name="department" placeholder="Your occupation" required></label>
+        </div>
+        <div class="form-row-full">
+          <label><span>Account Type</span>
+            <select name="role" required>
+              <option value="lawyer">Lawyer</option>
+              <option value="client">Client</option>
+            </select>
+          </label>
+        </div>
+        <button class="primary-btn branded-submit-btn" type="submit">Complete Registration</button>
+      </form>
+
+      <p class="auth-feedback" id="authFeedback" aria-live="polite"></p>
+      <p class="auth-page-switch">Already registered? <a href="/login">Go to login</a>.</p>
+    </section>
+  </main>
+
+  <script src="/auth.js"></script>
+</body>
+</html>

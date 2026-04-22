@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SASF LAW FIRM</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <nav class="topbar">
+        <div class="brand" style="display: flex; align-items: center; gap: 12px; margin-right: 20px;">
+          <img src="/uploads/logo.png" alt="Logo" style="width: 40px; height: 40px; border-radius: 6px;">
+          <div>
+            <p class="brand-name" style="margin: 0; line-height: 1;">SASF LAW FIRM</p>
+            <p style="font-size: 10px; font-weight: 700; color: #64748b; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Your Legal Partner</p>
+          </div>
+        </div>
+
+        <!-- Central Navigation -->
+        <div id="sessionSummary" class="session-summary hidden"></div>
+
+        <div class="topbar-actions">
+          <div id="clientStatusBadge" class="hidden" style="margin-right: 15px;"></div>
+          <button class="ghost-btn hidden" id="logoutBtn" type="button">Logout</button>
+        </div>
+      </nav>
+
+      <nav class="main-navbar" id="siteNav">
+        <div class="nav-center dashboard-nav-links" id="userNavLinks"></div>
+        <div class="nav-right" id="authNavLinks">
+          <a href="/login" class="nav-link auth-link">Login</a>
+          <a href="/register" class="nav-link auth-link highlight">Register</a>
+        </div>
+      </nav>
+
+      <div class="hero-grid landing-hero-grid">
+        <section class="hero-copy landing-hero-copy">
+          <span class="hero-eyebrow">Trusted Legal Guidance For Modern Clients</span>
+          <h1>Justice, Integrity, and Excellence.</h1>
+          <p class="hero-text">
+            At SASF Law Firm, we provide expert legal representation for individuals and businesses. Our team helps you
+            move forward with clarity, strong documentation, and confident legal strategy.
+          </p>
+
+          <div class="hero-pills landing-hero-pills">
+            <span>Case Tracking</span>
+            <span>Secure Documents</span>
+            <span>Fast Appointment Booking</span>
+          </div>
+
+          <div class="action-row landing-hero-actions">
+            <a class="primary-btn hero-primary-btn" href="/register">Consult an Expert</a>
+            <a class="ghost-btn hero-secondary-btn" href="/login">Client Login</a>
+          </div>
+
+          <div class="hero-trust-row">
+            <div class="hero-trust-card">
+              <strong>24/7</strong>
+              <span>Client intake support</span>
+            </div>
+            <div class="hero-trust-card">
+              <strong>4 Roles</strong>
+              <span>Admin, assistant, lawyer, client</span>
+            </div>
+            <div class="hero-trust-card">
+              <strong>1 Portal</strong>
+              <span>Appointments, cases, and files together</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="hero-showcase" aria-label="SASF Law Firm highlights">
+          <div class="hero-showcase-panel">
+            <div class="hero-showcase-glow"></div>
+            <div class="showcase-topline">
+              <span class="showcase-badge">Premium Legal Workflow</span>
+              <p>Designed to keep consultations, case updates, and client documents in one place.</p>
+            </div>
+
+            <div class="showcase-stat-card showcase-stat-primary">
+              <span class="showcase-stat-label">Consultation Flow</span>
+              <strong>Request, review, confirm</strong>
+              <p>Clients book appointments, assistants confirm them, and the matter is opened with supporting details.</p>
+            </div>
+
+            <div class="showcase-grid">
+              <article class="showcase-mini-card">
+                <span class="showcase-icon">CL</span>
+                <h3>Client Portal</h3>
+                <p>Book appointments, check case type, and manage supporting documents.</p>
+              </article>
+              <article class="showcase-mini-card">
+                <span class="showcase-icon">AS</span>
+                <h3>Assistant Review</h3>
+                <p>Verify requests, confirm schedules, and prepare the case handoff.</p>
+              </article>
+              <article class="showcase-mini-card">
+                <span class="showcase-icon">LW</span>
+                <h3>Lawyer Workspace</h3>
+                <p>Track hearings, review case notes, and organize legal documentation.</p>
+              </article>
+              <article class="showcase-mini-card showcase-mini-card-accent">
+                <span class="showcase-icon">SC</span>
+                <h3>Secure Collaboration</h3>
+                <p>Shared updates, role-based access, and a cleaner experience for every stage.</p>
+              </article>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </header>
+
+    <main class="main-grid">
+      <!-- Premium Landing Page Features (Visible to Guests) -->
+      <section class="landing-features" id="authSection" style="grid-column: 1 / -1;">
+
+        <div class="text-center" style="margin: 60px 0 40px; text-align: center;">
+          <h2 style="font-size: 2.2rem; margin-bottom: 15px;">Our Practice Areas</h2>
+          <p class="muted">Decades of combined experience across specialized legal domains.</p>
+        </div>
+
+        <div
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-bottom: 60px;">
+
+          <div class="landing-card"
+            style="background:var(--white); padding:30px; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid var(--border);">
+            <div
+              style="width:50px;height:50px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:24px;margin-bottom:20px;">
+              ⚖️</div>
+            <h3 style="margin-bottom:10px;font-size:1.25rem;">Corporate Law</h3>
+            <p style="color:var(--muted);line-height:1.6;">Comprehensive legal solutions for businesses, from formation
+              to contract disputes and mergers.</p>
+          </div>
+
+          <div class="landing-card"
+            style="background:var(--white); padding:30px; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid var(--border);">
+            <div
+              style="width:50px;height:50px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:24px;margin-bottom:20px;">
+              🛡️</div>
+            <h3 style="margin-bottom:10px;font-size:1.25rem;">Criminal Defense</h3>
+            <p style="color:var(--muted);line-height:1.6;">Vigorous representation protecting your rights and freedom
+              against all criminal charges.</p>
+          </div>
+
+          <div class="landing-card"
+            style="background:var(--white); padding:30px; border-radius:16px; box-shadow:var(--shadow-sm); border:1px solid var(--border);">
+            <div
+              style="width:50px;height:50px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:24px;margin-bottom:20px;">
+              👨‍👩‍👧</div>
+            <h3 style="margin-bottom:10px;font-size:1.25rem;">Family Law</h3>
+            <p style="color:var(--muted);line-height:1.6;">Compassionate advocacy for divorce, child custody, and family
+              dispute resolution.</p>
+          </div>
+
+        </div>
+
+        <div style="background: #1e293b; color:#fff; padding:60px 40px; border-radius:24px; text-align: center;">
+          <h2 style="font-size: 2rem; margin-bottom: 20px; color:#fff;">Employee Portals</h2>
+          <p style="opacity: 0.8; margin-bottom: 30px; max-width: 600px; margin-left: auto; margin-right: auto;">
+            Authorized personnel only. Access case files, manage appointments, and oversee system operations.</p>
+          <div style="display:flex; gap:15px; justify-content: center; flex-wrap: wrap;">
+            <a href="/assistant"
+              style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:10px 20px; border-radius:8px; text-decoration: none;">Assistant
+              Access</a>
+            <a href="/lawyer"
+              style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:10px 20px; border-radius:8px; text-decoration: none;">Lawyer
+              Login</a>
+            <a href="/admin"
+              style="background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); padding:10px 20px; border-radius:8px; text-decoration: none;">Administration</a>
+          </div>
+        </div>
+
+      </section>
+
+      <section class="panel summary-panel" id="summarySection">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">Live Status</p>
+            <h2>System Overview</h2>
+          </div>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="report-box" id="backendStatusBox">
+          <h4>Backend Status</h4>
+          <p>Checking Node server and Neon database connection...</p>
+        </div>
+        <div class="user-banner" id="userBanner">
+          <div>
+            <p class="section-kicker">Current Session</p>
+            <h3>No active user</h3>
+            <p>Login or create a new account to explore the role-based dashboard.</p>
+          </div>
+          <span class="role-badge">Guest</span>
+        </div>
+      </section>
+
+
+      <section class="panel dashboard-panel" id="dashboardSection">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">Dashboard</p>
+            <h2 id="dashboardTitle">Project dashboard</h2>
+            <div id="adminNav" class="admin-nav-bar hidden"></div>
+          </div>
+        </div>
+
+        <div class="dashboard-stack">
+          <section class="dashboard-section" id="profileSection">
+            <div class="section-headline">
+              <h3>Profile Handling</h3>
+            </div>
+            <form id="profileForm"></form>
+          </section>
+
+          <section class="dashboard-section" id="notificationSection">
+            <div class="section-headline">
+              <h3>Secure Inbox</h3>
+              <div class="action-row" id="notificationActions">
+                <label class="notif-select-all-label">
+                  <input type="checkbox" id="selectAllNotifications"> Select All
+                </label>
+                <button class="table-btn notif-delete-btn" id="deleteSelectedNotifications" type="button">Delete Selected</button>
+              </div>
+            </div>
+            <div id="notificationList" class="card-list"></div>
+          </section>
+
+          <section class="dashboard-section" id="userManagementSection">
+            <div class="section-headline">
+              <h3>User Management & Role Control</h3>
+            </div>
+            <form id="userManagementForm" class="form-grid form-grid-two"></form>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="userTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="dashboard-section" id="reportSection">
+            <div class="section-headline">
+              <h3>Report Generation</h3>
+            </div>
+
+            <div class="report-controls-grid">
+              <div class="report-filter-wrapper">
+                <label><span>Select Report Range</span>
+                  <select id="reportRangeSelect">
+                    <option value="weekly">Weekly Report (Last 7 Days)</option>
+                    <option value="monthly" selected>Monthly Report (Last 30 Days)</option>
+                    <option value="yearly">Yearly Report (Current Year)</option>
+                  </select>
+                </label>
+              </div>
+              <div class="report-btn-group">
+                <button class="report-card-btn" id="genDetailsReportBtn">
+                  <span class="icon">DOC</span>
+                  <div class="report-card-text">
+                    <strong>Details Report</strong>
+                    <span>Case & User Activities</span>
+                  </div>
+                </button>
+                <button class="report-card-btn" id="genTransReportBtn">
+                  <span class="icon">FIN</span>
+                  <div class="report-card-text">
+                    <strong>Transaction Report</strong>
+                    <span>Financial Summaries</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="report-display-area hidden" id="reportOutputBox">
+              <div class="report-header">
+                <h4 id="reportTitle">Generated Report</h4>
+                <div class="report-header-actions">
+                  <button class="primary-btn-sm" type="button" onclick="window.print()">Download PDF</button>
+                </div>
+              </div>
+              <div id="reportOutputText" class="report-content-box">
+                <!-- Dynamic content goes here -->
+              </div>
+            </div>
+          </section>
+
+          <!-- Admin Dashboard Sections -->
+
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="confirmModal" class="confirm-modal hidden" aria-hidden="true">
+    <div class="confirm-modal-backdrop" data-confirm-close></div>
+    <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+      <div class="confirm-modal-accent"></div>
+      <div class="confirm-modal-icon">!</div>
+      <p class="confirm-modal-kicker">Please Confirm</p>
+      <h3 id="confirmModalTitle">Are you sure?</h3>
+      <p id="confirmModalMessage" class="confirm-modal-message">This action needs your confirmation.</p>
+      <div class="confirm-modal-actions">
+        <button id="confirmModalCancel" class="ghost-btn confirm-secondary-btn" type="button">Keep It</button>
+        <button id="confirmModalApprove" class="primary-btn confirm-primary-btn" type="button">Yes, Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <button id="scrollToTopBtn" class="scroll-top-btn hidden" type="button" aria-label="Scroll to top">Top</button>
+  <script src="/script.js"></script>
+  <script src="/client-portal.js"></script>
+</body>
+
+</html>

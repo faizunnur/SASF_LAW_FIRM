@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistant Portal | SASF LAW FIRM</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root {
+      --assistant-primary: #f59e0b; /* Vibrant Yellow/Amber */
+      --assistant-secondary: #d97706;
+      --assistant-bg: #fffcf0;
+    }
+
+    body {
+      background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .gate-container {
+      background: white;
+      width: 100%;
+      max-width: 500px;
+      border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(245, 158, 11, 0.15);
+      padding: 40px;
+      margin: 20px;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+
+
+    .brand-logo {
+      width: 100px;
+      margin: 0 auto 20px;
+      display: block;
+      border-radius: 12px;
+    }
+
+    .gate-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .gate-header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+
+    .tagline {
+      color: var(--assistant-secondary);
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .gate-header p.subtitle {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .toggle-bar {
+      display: flex;
+      background: #f1f5f9;
+      padding: 6px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .toggle-btn.active {
+      background: white;
+      color: var(--assistant-primary);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper i.prefix-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+    }
+
+    .input-wrapper input, .input-wrapper select {
+      width: 100%;
+      padding: 12px 14px 12px 42px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      background: white;
+    }
+
+    .input-wrapper input:focus, .input-wrapper select:focus {
+      border-color: var(--assistant-primary);
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+
+    .password-toggle:hover {
+      color: var(--assistant-primary);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--assistant-primary);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .submit-btn:hover {
+      background: var(--assistant-secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+    }
+
+    .hidden { display: none; }
+
+    .category-badge {
+      font-size: 11px;
+      background: #fff8f1;
+      color: #b45309;
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid #fde68a;
+      display: inline-block;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="gate-container">
+    <div class="gate-header">
+      <img src="/uploads/logo.png" alt="SASF Logo" class="brand-logo">
+      <h1>SASF LAW FIRM</h1>
+      <p class="tagline">Your Legal Partner</p>
+      <p class="subtitle" id="gateSubtitle">Welcome back! Please login to your workspace.</p>
+    </div>
+
+    <div class="toggle-bar">
+      <button class="toggle-btn active" onclick="switchTab('login')">Login</button>
+      <button class="toggle-btn" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" class="auth-form">
+      <div class="form-group">
+        <label>Username or Email</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-envelope prefix-icon"></i>
+          <input type="text" name="identifier" placeholder="Enter email or username" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-lock prefix-icon"></i>
+          <input type="password" name="password" id="loginPass" placeholder="Enter password" required>
+          <i class="fa-solid fa-eye password-toggle" onclick="togglePass('loginPass')"></i>
+        </div>
+      </div>
+      <button type="submit" class="submit-btn">Login to Workspace</button>
+    </form>
+
+    <!-- Signup Form -->
+    <form id="signupForm" class="auth-form hidden">
+      <div class="form-group">
+        <label>Full Name</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-user prefix-icon"></i>
+          <input type="text" name="name" placeholder="Md. Kamal Hossain" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-envelope prefix-icon"></i>
+          <input type="email" name="email" placeholder="kamal@gmail.com" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-phone prefix-icon"></i>
+          <input type="tel" name="phone" placeholder="+880 1XXX-XXXXXX" required>
+        </div>
+      </div>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div class="form-group">
+          <label>Case Category</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-briefcase prefix-icon" style="left: 10px;"></i>
+            <select name="department" id="categorySelect" required style="padding-left: 35px; font-size: 13px;">
+              <option value="">Select...</option>
+              <option value="Criminal Law">Criminal Law</option>
+              <option value="Civil Law">Civil Law</option>
+              <option value="Family Law">Family Law</option>
+              <option value="Corporate / Business Law">Corporate Law</option>
+              <option value="Property / Real Estate Law">Real Estate</option>
+              <option value="Labor & Employment Law">Labor Law</option>
+              <option value="Intellectual Property (IP) Law">IP Law</option>
+              <option value="Tax Law">Tax Law</option>
+              <option value="Immigration Law">Immigration</option>
+              <option value="Cyber Law / IT Law">Cyber Law</option>
+              <option value="Environmental Law">Environmental</option>
+              <option value="Constitutional / Administrative Law">Admin Law</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Select Lawyer</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-gavel prefix-icon" style="left: 10px;"></i>
+            <select name="lawyerId" id="lawyerSelect" required style="padding-left: 35px; font-size: 13px;">
+              <option value="">Choose...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Create Password</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-lock prefix-icon"></i>
+          <input type="password" name="password" id="regPass" placeholder="At least 6 chars" required minlength="6">
+          <i class="fa-solid fa-eye password-toggle" onclick="togglePass('regPass')"></i>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-shield-check prefix-icon"></i>
+          <input type="password" name="confirm_password" id="regConfirmPass" placeholder="Repeat password" required>
+          <i class="fa-solid fa-eye password-toggle" onclick="togglePass('regConfirmPass')"></i>
+        </div>
+      </div>
+      <button type="submit" class="submit-btn">Create Assistant Account</button>
+    </form>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/auth.js"></script>
+  <script>
+    let allLawyers = [];
+
+    // Initialize Page
+    (async () => {
+      try {
+        const res = await fetch("/api/load");
+        const data = await res.json();
+        if (data && data.users) {
+          allLawyers = data.users.filter(u => u.role === "lawyer");
+        }
+      } catch (e) { console.error("Failed to load lawyers", e); }
+    })();
+
+    // Dynamic Filtering
+    document.getElementById("categorySelect").addEventListener("change", (e) => {
+      const cat = e.target.value;
+      const sel = document.getElementById("lawyerSelect");
+      sel.innerHTML = '<option value="">Choose...</option>';
+      
+      const filtered = allLawyers.filter(l => l.department === cat);
+      filtered.forEach(l => {
+        const opt = document.createElement("option");
+        opt.value = l.id;
+        opt.textContent = l.name;
+        sel.appendChild(opt);
+      });
+
+      if(filtered.length === 0 && cat !== "") {
+        const opt = document.createElement("option");
+        opt.disabled = true;
+        opt.textContent = "No lawyers in this category";
+        sel.appendChild(opt);
+      }
+    });
+
+    function switchTab(tab) {
+      const loginForm = document.getElementById("loginForm");
+      const signupForm = document.getElementById("signupForm");
+      const btns = document.querySelectorAll(".toggle-btn");
+      const sub = document.getElementById("gateSubtitle");
+
+      if (tab === 'login') {
+        loginForm.classList.remove("hidden");
+        signupForm.classList.add("hidden");
+        btns[0].classList.add("active");
+        btns[1].classList.remove("active");
+        sub.textContent = "Welcome back! Please login to your workspace.";
+      } else {
+        loginForm.classList.add("hidden");
+        signupForm.classList.remove("hidden");
+        btns[1].classList.add("active");
+        btns[0].classList.remove("active");
+        sub.textContent = "Join the team. Create your assistant profile today.";
+      }
+    }
+
+    function togglePass(id) {
+      const input = document.getElementById(id);
+      const icon = input.nextElementSibling;
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.replace("fa-eye", "fa-eye-slash");
+      } else {
+        input.type = "password";
+        icon.classList.replace("fa-eye-slash", "fa-eye");
+      }
+    }
+
+    // Register handling extensions
+    document.getElementById("signupForm").addEventListener("submit", (e) => {
+      const pass = document.getElementById("regPass").value;
+      const confirm = document.getElementById("regConfirmPass").value;
+      if (pass !== confirm) {
+        e.preventDefault();
+        alert("Passwords do not match!");
+        return;
+      }
+    });
+  </script>
+</body>
+
+</html>

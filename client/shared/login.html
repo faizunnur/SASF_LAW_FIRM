@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | SASF LAW FIRM</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="auth-page-body">
+  <main class="auth-page-shell">
+    <section class="auth-page-card">
+      <a class="auth-back-link" href="/">Back to dashboard</a>
+      
+      <div class="registration-header-bar" style="margin-top: 20px; background-color: #f0f7ff; color: #1e40af; border-color: #dbeafe;">Secure Login</div>
+      
+      <p class="auth-page-text" style="margin-bottom: 25px;">Enter your credentials to access your SASF Law Firm dashboard.</p>
+      
+      <form id="loginPageForm" class="branded-registration-form">
+        <div class="form-row-full">
+          <label><span>Email Address</span><input type="email" name="email" placeholder="Enter your email" required></label>
+        </div>
+        <div class="form-row-full">
+          <label><span>Password</span><input type="password" name="password" placeholder="Enter your password" required></label>
+        </div>
+        <button class="primary-btn branded-submit-btn" type="submit">Sign In to Dashboard</button>
+      </form>
+
+      <p class="auth-feedback" id="authFeedback" aria-live="polite"></p>
+      <p class="auth-page-switch">Need an account? <a href="/register">Create one here</a>.</p>
+    </section>
+  </main>
+
+  <script src="/auth.js"></script>
+</body>
+</html>

@@ -924,3 +924,930 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# # try:
+#     __import__('pysqlite3')
+#     import sys
+#     sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+# except ImportError:
+#     pass
+
+# import os
+# import logging
+# import math
+# import pathlib
+# import tempfile
+# import requests
+# import json
+# from typing import List, Dict
+# from telegram import Update, ForceReply, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
+# from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ConversationHandler
+# import google.generativeai as genai
+# from fpdf import FPDF
+# import tempfile
+# from dotenv import load_dotenv
+# from datetime import datetime, timedelta
+# from dateutil import parser
+# from rag_system import LegalRAG
+
+# # Load environment variables
+# load_dotenv()
+
+# # Configure logging
+# logging.basicConfig(
+#     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+# )
+# logger = logging.getLogger(__name__)
+
+# # Configure Gemini
+# genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# print("--- STARTING SELF LAWYER BOT (v2.0) ---")
+# print("TARGET MODEL: gemini-flash-latest")
+
+# # System Prompt
+# SYSTEM_PROMPT = """
+# You are the "SASF LAW FIRM" Digital Assistant.
+# Your goal is to help users categorize their legal issues.
+# Always be professional and strictly follow the categorization instructions.
+# """
+
+# # Initialize model with system instruction
+# model = genai.GenerativeModel(
+#     model_name="gemini-flash-latest",
+#     system_instruction=SYSTEM_PROMPT
+# )
+
+# # Initialize RAG
+# rag = LegalRAG()
+
+# # Conversation states for drafting documents (LEGACY / REDIRECTED)
+# ASK_NAME_OLD, ASK_LOCATION_OLD, ASK_OFFENSE_DETAILS_OLD = range(3)
+
+# # Conversation states for deadline tracker
+# ASK_DEADLINE_DESCRIPTION, ASK_DEADLINE_DATE = range(3, 5)
+
+# # Conversation states for case analysis
+# ASK_CASE_DESCRIPTION = 6
+
+# # Conversation states for professional GD generation
+# (
+#     ASK_GD_DATE,
+#     ASK_GD_THANA,
+#     ASK_GD_DISTRICT,
+#     ASK_GD_NAME,
+#     ASK_GD_FATHER,
+#     ASK_GD_ADDRESS,
+#     ASK_GD_INCIDENT_DATE,
+#     ASK_GD_INCIDENT_TIME,
+#     ASK_GD_INCIDENT_LOCATION,
+#     ASK_GD_DESCRIPTION,
+#     ASK_GD_MOBILE
+# ) = range(8, 19)
+
+# # Store message history and preferences
+# user_history: Dict[int, List[Dict]] = {}
+# user_prefs: Dict[int, Dict] = {}
+
+# def get_emergency_keyboard():
+#     keyboard = [[InlineKeyboardButton("📞 Call 999 (Emergency)", callback_data='emergency_num')]]
+#     return InlineKeyboardMarkup(keyboard)
+
+# def get_main_menu(lang='English'):
+#     """Generate professional persistent menu with optimized grid."""
+#     if lang == 'Bangla':
+#         # ONLY keeping Start, Category Select, GD, Location and Language for SASF Law Firm demo
+#         keyboard = [
+#             ["🚀 নতুন করে শুরু করুন", "⚖️ আইনি বিভাগ শনাক্ত করুন"],
+#             ["📄 প্রফেশনাল জিডি (GD)"],
+#             [KeyboardButton(text="📍 নিকটস্থ থানা (Police Station)", request_location=True), "🌐 ভাষা পরিবর্তন"]
+#         ]
+#     else:
+#         # ONLY keeping Start, Category Select, GD, Location and Language for SASF Law Firm demo
+#         keyboard = [
+#             ["🚀 Start New", "⚖️ Identify Legal Category"],
+#             ["📄 Professional GD"],
+#             [KeyboardButton(text="📍 Nearest Police Station", request_location=True), "🌐 Change Language"]
+#         ]
+#         # OLD MENU KEPT FOR FUTURE:
+#         # keyboard = [
+#         #     ["🚀 Start New", "🔍 Smart Case Analysis"],
+#         #     ["📄 Professional GD", "📅 Deadline Tracker"],
+#         #     [KeyboardButton(text="📍 Nearest Police Station", request_location=True), "📚 Know Your Rights"],
+#         #     ["🌐 Change Language", "❓ Help & Features", "🧹 Clear History"]
+#         # ]
+#     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, is_persistent=True)
+
+# async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Send a message when the command /start is issued."""
+#     user = update.effective_user
+#     user_id = user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+#     welcome_msg = (
+#         f"Greetings {user.first_name}! Welcome to the <b>SASF LAW FIRM</b> Digital Assistant.\n\n"
+#         "I can help you identify which category of law your issue belongs to so you can easily find the right legal consultant.\n\n"
+#         "Please briefly describe your incident, or use the menu below to get started!"
+#     )
+#     if lang == 'Bangla':
+#         welcome_msg = (
+#             f"শুভেচ্ছা {user.first_name}! <b>SASF LAW FIRM</b> ডিজিটাল অ্যাসিস্ট্যান্টে আপনাকে স্বাগতম।\n\n"
+#             "আমি আপনার আইনি সমস্যাটি কোন বিভাগের অধীনে পড়ে তা শনাক্ত করতে সাহায্য করব, যাতে আপনি সঠিক আইনজীবীর পরামর্শ নিতে পারেন।\n\n"
+#             "দয়া করে সংক্ষেপে আপনার ঘটনাটি বর্ণনা করুন, বা শুরু করতে নিচের মেনুটি ব্যবহার করুন!"
+#         )
+    
+#     await update.message.reply_text(welcome_msg, parse_mode="HTML", reply_markup=get_main_menu(lang))
+
+# async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Send a message when the command /help is issued."""
+#     help_text = (
+#         "<b>Self Lawyer Bangladesh - Features:</b>\n\n"
+#         "1. <b>AI Problem Analyzer:</b> Describe your issue, and I'll identify the legal category.\n"
+#         "2. <b>Auto-Law Finder:</b> Links issues to Penal Code, CrPC, Digital Security Act, etc.\n"
+#         "3. <b>Legal Roadmap:</b> Provides relevant sections, explanations, action plans, and document checklists.\n"
+#         "4. <b>Voice Note Analysis:</b> Send a voice note, and I will transcribe and analyze it seamlessly.\n"
+#         "5. <b>Nearest Police Station:</b> Share your location to instantly get contact details for the closest Thana.\n"
+#         "6. <b>Know Your Rights:</b> A dedicated menu to easily explore your legal rights and roadmaps.\n"
+#         "7. <b>Plan B Logic:</b> Advice for FIR refusal (for Criminal cases).\n"
+#         "8. <b>Zimmanama:</b> Recovery guidance (for Theft cases).\n"
+#         "9. <b>Emergency:</b> Use the persistent button or call 999.\n"
+#         "10. <b>Language:</b> Use the menu to switch between English and Bangla.\n"
+#         "11. <b>Professional GD:</b> Create a formal GD application in PDF format.\n"
+#         "12. <b>Deadline Tracker:</b> Calculate legal deadlines and limitation periods.\n\n"
+#         "<b>Privacy:</b> Use the Clear History button or /clear to delete your session history."
+#     )
+#     await update.message.reply_text(help_text, parse_mode="HTML")
+
+# async def start_new(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Reset session state and show welcome message."""
+#     user_id = update.effective_user.id
+#     user_history.pop(user_id, None)
+#     context.user_data.clear()
+#     await start(update, context)
+
+# async def clear_history(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Clear the user's conversation history."""
+#     user_id = update.effective_user.id
+#     user_history.pop(user_id, None)
+#     user_prefs.pop(user_id, None)
+#     await update.message.reply_text("Your conversation history and session preferences have been cleared. Your privacy is our priority. You are now starting fresh!")
+
+# async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Choose language."""
+#     keyboard = [
+#         [
+#             InlineKeyboardButton("English", callback_data='lang_en'),
+#             InlineKeyboardButton("বাংলা (Bangla)", callback_data='lang_bn'),
+#         ]
+#     ]
+#     reply_markup = InlineKeyboardMarkup(keyboard)
+#     await update.message.reply_text("Please choose your preferred language / অনুগ্রহ করে আপনার পছন্দের ভাষা নির্বাচন করুন:", reply_markup=reply_markup)
+
+# async def language_button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Handle language selection."""
+#     query = update.callback_query
+#     await query.answer()
+    
+#     user_id = query.from_user.id
+#     if user_id not in user_prefs:
+#         user_prefs[user_id] = {}
+    
+#     if query.data == 'lang_en':
+#         user_prefs[user_id]['lang'] = 'English'
+#         await query.edit_message_text(text="Language set to English.")
+#         await query.message.reply_text("Main menu updated.", reply_markup=get_main_menu('English'))
+#     else:
+#         user_prefs[user_id]['lang'] = 'Bangla'
+#         await query.edit_message_text(text="ভাষা বাংলা হিসেবে সেট করা হয়েছে।")
+#         await query.message.reply_text("প্রধান মেনু আপডেট করা হয়েছে।", reply_markup=get_main_menu('Bangla'))
+
+# async def emergency_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Handle emergency button click."""
+#     query = update.callback_query
+#     await query.answer()
+#     await query.message.reply_text("🚨 <b>National Emergency Service: 999</b>\n\nPlease dial 999 from your phone's dialer to contact the Police, Fire Service, or Ambulance immediately.", parse_mode="HTML")
+
+# def get_nearest_police_station_osm(lat, lon, radius=5000):
+#     """Query OpenStreetMap Overpass API for the nearest police station."""
+#     overpass_url = "https://overpass-api.de/api/interpreter"
+#     overpass_query = f"""
+#     [out:json][timeout:25];
+#     (
+#       node["amenity"="police"](around:{radius},{lat},{lon});
+#       way["amenity"="police"](around:{radius},{lat},{lon});
+#       relation["amenity"="police"](around:{radius},{lat},{lon});
+#     );
+#     out center;
+#     """
+#     headers = {
+#         'User-Agent': 'SelfLawyerBot/2.0 (Bangladesh Bot)',
+#         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+#     }
+#     try:
+#         response = requests.post(overpass_url, data={'data': overpass_query}, headers=headers, timeout=10)
+#         response.raise_for_status()
+#         data = response.json()
+#     except Exception as e:
+#         logger.error(f"Error querying Overpass: {e}")
+#         return None
+    
+#     if not data.get('elements'):
+#         return None
+        
+#     def calc_dist(l1, ln1, l2, ln2):
+#         R = 6371.0
+#         dlat = math.radians(l2 - l1)
+#         dlon = math.radians(ln2 - ln1)
+#         a = math.sin(dlat / 2)**2 + math.cos(math.radians(l1)) * math.cos(math.radians(l2)) * math.sin(dlon / 2)**2
+#         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+#         return R * c
+        
+#     nearest = None
+#     min_dist = float('inf')
+    
+#     for element in data['elements']:
+#         elat = element.get('lat', element.get('center', {}).get('lat'))
+#         elon = element.get('lon', element.get('center', {}).get('lon'))
+#         if elat and elon:
+#             dist = calc_dist(lat, lon, elat, elon)
+#             if dist < min_dist:
+#                 min_dist = dist
+#                 nearest = element
+                
+#     if nearest:
+#         name = nearest.get('tags', {}).get('name', 'Police Station (Name Unknown)')
+#         name_en = nearest.get('tags', {}).get('name:en', name)
+#         return {"name": name_en, "dist": min_dist}
+#     return None
+
+# async def fetch_dynamic_phone(station_name):
+#     """Use Gemini to quickly fetch the phone number of a police station."""
+#     try:
+#         from google.generativeai import GenerativeModel
+#         local_model = GenerativeModel('gemini-1.5-flash')
+#         prompt = f"What is the official phone number of {station_name} police station in Bangladesh? Provide ONLY the main phone number. Do not include any other text. If unknown, say 'Not found'."
+#         response = local_model.generate_content(prompt)
+#         return response.text.strip()
+#     except Exception as e:
+#         logger.error(f"Gemini Phone Fetch Error: {e}")
+#         return "Not found"
+
+# async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     user_location = update.message.location
+#     lat = user_location.latitude
+#     lon = user_location.longitude
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+
+#     # Basic coordinate validation for Bangladesh (roughly 20-27 Lat, 88-93 Lon)
+#     if not (20 < lat < 27 and 88 < lon < 93):
+#         msg = ("📍 Your location indicates you are outside Bangladesh or your GPS is inaccurate.\n\n"
+#                "This service is fully dynamic for all areas within **Bangladesh borders**. Please check your GPS settings.")
+#         if lang == 'Bangla':
+#             msg = ("📍 আপনার লোকেশন দেখাচ্ছে আপনি বাংলাদেশের বাইরে আছেন অথবা জিপিএস সঠিক নয়।\n\n"
+#                    "এই পরিষেবাটি **বাংলাদেশের** যেকোনো স্থানের জন্য প্রযোজ্য। আপনার জিপিএস ঠিক করুন।")
+#         await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=get_main_menu(lang))
+#         return
+
+#     # Let user know we are searching dynamically
+#     status_msg = await update.message.reply_text("🔍 Searching nationwide database..." if lang == 'English' else "🔍 দেশজুড়ে ডেটাবেস অনুসন্ধান করা হচ্ছে...")
+
+#     # Query OSM
+#     station_data = get_nearest_police_station_osm(lat, lon, radius=10000) # 10km radius
+    
+#     if not station_data:
+#         # Retry with larger radius for rural areas
+#         await status_msg.edit_text("🔍 Expanding search radius (rural area)..." if lang == 'English' else "🔍 অনুসন্ধানের পরিধি বাড়ানো হচ্ছে (গ্রামীণ এলাকা)...")
+#         station_data = get_nearest_police_station_osm(lat, lon, radius=25000) # 25km radius
+        
+#     if station_data:
+#         distance_km = round(station_data['dist'], 2)
+#         station_name = station_data['name']
+        
+#         # Get phone number dynamically from Gemini
+#         await status_msg.edit_text(f"📞 Fetching contact for {station_name}..." if lang == 'English' else f"📞 {station_name}-এর যোগাযোগ তথ্য খোঁজা হচ্ছে...")
+#         phone = await fetch_dynamic_phone(station_name)
+        
+#         if lang == 'Bangla':
+#             msg = (f"📍 <b>নিকটস্থ থানা:</b> {station_name}\n"
+#                    f"📏 <b>দূরত্ব:</b> {distance_km} কিমি\n"
+#                    f"📞 <b>যোগাযোগ:</b> {phone}")
+#         else:
+#             msg = (f"📍 <b>Nearest Police Station:</b> {station_name}\n"
+#                    f"📏 <b>Distance:</b> {distance_km} km\n"
+#                    f"📞 <b>Contact:</b> {phone}")
+        
+#         # We delete the status message and send the final keyboard with emergency button
+#         await status_msg.delete()
+#         await update.message.reply_text(msg, parse_mode="HTML", reply_markup=get_emergency_keyboard())
+#     else:
+#         err_msg = "Could not find any police station nearby. Please ensure your GPS is accurate."
+#         if lang == 'Bangla':
+#             err_msg = "কাছাকাছি কোনো থানা পাওয়া যায়নি। অনুগ্রহ করে নিশ্চিত করুন আপনার জিপিএস সঠিক।"
+#         await status_msg.edit_text(err_msg, reply_markup=get_main_menu(lang))
+
+# async def start_gd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     """Start the professional GD drafting process."""
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+#     if lang == 'Bangla':
+#         await update.message.reply_text("আসুন একটি পেশাদার জিডি প্রস্তুত করি। আজকের তারিখ কি? (যেমন: ১০ মার্চ ২০২৪)")
+#     else:
+#         await update.message.reply_text("Let's prepare a professional GD. What is today's date? (e.g., 10 March 2024)")
+#     return ASK_GD_DATE
+
+# async def receive_gd_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_date'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "Which Thana (Police Station)?" if lang == 'English' else "কোন থানা?"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_THANA
+
+# async def receive_gd_thana(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_thana'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "Which District?" if lang == 'English' else "কোন জেলা?"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_DISTRICT
+
+# async def receive_gd_district(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_district'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "What is your full name?" if lang == 'English' else "আপনার পূর্ণ নাম কি?"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_NAME
+
+# async def receive_gd_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_name'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "What is your Father's Name?" if lang == 'English' else "আপনার পিতার নাম কি?"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_FATHER
+
+# async def receive_gd_father(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_father'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "What is your Address?" if lang == 'English' else "আপনার ঠিকানা কি?"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_ADDRESS
+
+# async def receive_gd_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_address'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "When did the incident happen? (Date)" if lang == 'English' else "ঘটনাটি কবে ঘটেছিল? (তারিখ)"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_INCIDENT_DATE
+
+# async def receive_gd_incident_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_incident_date'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "At what time did the incident happen?" if lang == 'English' else "ঘটনাটি কখন ঘটেছিল? (সময়)"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_INCIDENT_TIME
+
+# async def receive_gd_incident_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_incident_time'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "Where did the incident happen? (Location)" if lang == 'English' else "ঘটনাটি কোথায় ঘটেছিল? (স্থান)"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_INCIDENT_LOCATION
+
+# async def receive_gd_incident_location(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_incident_location'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "Please describe the incident briefly." if lang == 'English' else "অনুগ্রহ করে ঘটনাটি সংক্ষেপে বর্ণনা করুন।"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_DESCRIPTION
+
+# async def receive_gd_description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     context.user_data['gd_description'] = update.message.text
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "What is your Mobile Number?" if lang == 'English' else "আপনার মোবাইল নম্বর কি?"
+#     await update.message.reply_text(msg)
+#     return ASK_GD_MOBILE
+
+# async def receive_gd_mobile(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+#     context.user_data['gd_mobile'] = update.message.text
+    
+#     if lang == 'Bangla':
+#         await update.message.reply_text("ধন্যবাদ। আপনার প্রফেশনাল জিডি তৈরি করা হচ্ছে...")
+#     else:
+#         await update.message.reply_text("Thank you. Generating your professional GD now...")
+    
+#     # helper for date formatting
+#     def format_legal_date(date_str):
+#         try:
+#             d = parser.parse(date_str)
+#             return d.strftime("%d %B %Y") # e.g., 10 March 2026
+#         except:
+#             return date_str.strip().title()
+
+#     data = {
+#         'date': format_legal_date(context.user_data.get('gd_date')),
+#         'thana': context.user_data.get('gd_thana', '').strip().title(),
+#         'district': context.user_data.get('gd_district', '').strip().title(),
+#         'name': context.user_data.get('gd_name', '').strip().title(),
+#         'father_name': context.user_data.get('gd_father', '').strip().title(),
+#         'address': context.user_data.get('gd_address', '').strip(),
+#         'incident_date': format_legal_date(context.user_data.get('gd_incident_date')),
+#         'incident_time': context.user_data.get('gd_incident_time', '').strip(),
+#         'incident_location': context.user_data.get('gd_incident_location', '').strip().title(),
+#         'description': context.user_data.get('gd_description', '').strip(),
+#         'mobile': context.user_data.get('gd_mobile', '').strip()
+#     }
+    
+#     import templates
+#     gd_text = templates.generate_GD_application(data)
+    
+#     response_msg = "Here is your professional GD (Copy and use):\n\n" if lang == 'English' else "সহজেই কপি করার জন্য আপনার প্রফেশনাল জিডি নিচে কোড ব্লকে দেওয়া হলো:\n\n"
+#     await update.message.reply_text(f"{response_msg}```\n{gd_text}\n```", parse_mode="Markdown")
+    
+#     # Generate Document (PDF)
+#     pdf = FPDF()
+#     # 1 inch = 25.4 mm
+#     pdf.set_margins(25.4, 25.4, 25.4)
+#     pdf.add_page()
+#     pdf.set_font("Arial", size=12)
+    
+#     # Header (Centered)
+#     pdf.set_font("Arial", 'B', size=16)
+#     pdf.cell(0, 10, txt="General Diary (GD) Application", ln=True, align='C')
+#     pdf.ln(10)
+    
+#     # Content
+#     pdf.set_font("Arial", size=12)
+#     line_height = 7.0 # Reduced from 8.0 to ensure single-page fit
+#     for line in gd_text.split('\n'):
+#         if not line.strip():
+#             pdf.ln(4) # Slightly reduced vertical space for empty lines
+#             continue
+#         try:
+#             pdf.multi_cell(0, line_height, txt=line)
+#         except:
+#             pdf.multi_cell(0, line_height, txt=line.encode('latin-1', 'replace').decode('latin-1'))
+    
+#     # Save to a temporary file
+#     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+#     temp_path = temp_file.name
+#     temp_file.close()
+#     pdf.output(temp_path)
+    
+#     # Send PDF document
+#     try:
+#         with open(temp_path, 'rb') as doc_file:
+#             caption = "Here is your professional GD in PDF format."
+#             if lang == 'Bangla':
+#                caption = "এখানে আপনার প্রফেশনাল জিডি পিডিএফ আকারে দেওয়া হলো।"
+#             await update.message.reply_document(
+#                 document=doc_file, 
+#                 filename=f"GD_{data['name'].replace(' ', '_')}.pdf", 
+#                 caption=caption
+#             )
+#     finally:
+#         if os.path.exists(temp_path):
+#             os.remove(temp_path)
+
+#     # Clear data
+#     keys_to_clear = ['gd_date', 'gd_thana', 'gd_district', 'gd_name', 'gd_father', 'gd_address', 
+#                      'gd_incident_date', 'gd_incident_time', 'gd_incident_location', 'gd_description', 'gd_mobile']
+#     for key in keys_to_clear:
+#         context.user_data.pop(key, None)
+        
+#     return ConversationHandler.END
+
+# async def cancel_gd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+#     msg = "GD generation cancelled." if lang == 'English' else "জিডি তৈরি বাতিল করা হয়েছে।"
+#     await update.message.reply_text(msg)
+    
+#     keys_to_clear = ['gd_date', 'gd_thana', 'gd_district', 'gd_name', 'gd_father', 'gd_address', 
+#                      'gd_incident_date', 'gd_incident_time', 'gd_incident_location', 'gd_description', 'gd_mobile']
+#     for key in keys_to_clear:
+#         context.user_data.pop(key, None)
+#     return ConversationHandler.END
+
+# async def start_drafting(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     """Redirect draft_document to generate_gd or inform user."""
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+#     if lang == 'Bangla':
+#         await update.message.reply_text("'/draft_document' পরিবর্তন করে '/generate_gd' করা হয়েছে। আমি অটোম্যাটিক আপনার জন্য এটি শুরু করছি...")
+#     else:
+#         await update.message.reply_text("'/draft_document' has been updated to '/generate_gd'. Starting it for you now...")
+#     return await start_gd(update, context) # Re-using start_gd logic
+
+
+# async def start_case_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     """Start the formal case analysis flow."""
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+#     msg = "Please describe your incident in detail. I will analyze the relevant laws and provide a step-by-step strategic roadmap for you."
+#     if lang == 'Bangla':
+#         msg = "অনুগ্রহ করে আপনার ঘটনাটি বিস্তারিত বর্ণনা করুন। আমি প্রাসঙ্গিক আইনগুলো বিশ্লেষণ করব এবং আপনার জন্য একটি ধাপে ধাপে কৌশলগত নির্দেশিকা প্রদান করব।"
+#     await update.message.reply_text(msg, reply_markup=ReplyKeyboardRemove())
+#     return ASK_CASE_DESCRIPTION
+
+# async def receive_case_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     """Pass incident description to the main analysis logic."""
+#     # We simply call handle_message to reuse the complex Gemini logic
+#     await handle_message(update, context)
+#     return ConversationHandler.END
+
+# async def start_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     """Start the AI-driven deadline tracker process."""
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+#     if lang == 'Bangla':
+#         await update.message.reply_text("আসুন আপনার আইনি সময়সীমা (Deadline) নির্ধারণ করি। সংক্ষেপে আপনার ঘটনাটি বর্ণনা করুন (যেমন: 'আমার মালিক বেতন দেয়নি' বা 'আমি মামলা হারার পর আপিল করতে চাই')।", reply_markup=ReplyKeyboardRemove())
+#     else:
+#         await update.message.reply_text("Let's determine your legal deadline. Please briefly describe your incident (e.g., 'My employer hasn't paid me' or 'I want to appeal after losing a case').", reply_markup=ReplyKeyboardRemove())
+#     return ASK_DEADLINE_DESCRIPTION
+
+# async def receive_deadline_description(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     """Receive the incident description."""
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+#     context.user_data['deadline_description'] = update.message.text
+    
+#     if lang == 'Bangla':
+#         await update.message.reply_text("চমৎকার। ঘটনা বা কারণ ঘটার তারিখটি কবে ছিল? (যেমন, ১০ মার্চ ২০২৪ বা DD/MM/YYYY ফরম্যাটে দিন)")
+#     else:
+#         await update.message.reply_text("Great. What was the date of the incident or cause of action? (e.g., 10 March 2024 or DD/MM/YYYY format)")
+#     return ASK_DEADLINE_DATE
+
+# async def receive_deadline_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     """Classify with AI, calculate the deadline using RAG context, and respond in minimalist format."""
+#     date_str = update.message.text
+#     incident_description = context.user_data.get('deadline_description', '')
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+    
+#     try:
+#         incident_date = parser.parse(date_str, dayfirst=True)
+#     except:
+#         await update.message.reply_text("Invalid date format. Use DD/MM/YYYY.")
+#         return ASK_DEADLINE_DATE
+
+#     # RAG Retrieval
+#     rag_query = f"Limitation period and time for filing for: {incident_description}"
+#     search_results = rag.query_laws(rag_query, n_results=3)
+#     rag_context = "\n\n".join(search_results['documents'][0])
+
+#     # Minimalist AI Prompt
+#     classification_prompt = f"""
+#     Context: {rag_context}
+#     Incident: {incident_description}
+#     Date: {incident_date.strftime('%d/%m/%Y')}
+    
+#     Task: Identify legal category, section, and limitation period according to Bangladesh Law.
+#     Return EXACTLY this structure (no other text):
+#     Category: [Law/Section Name]
+#     Period: [Number] [days/months/years]
+#     Rule: [Strictly 1-sentence rule explaining the deadline]
+#     """
+    
+#     try:
+#         response = model.generate_content(classification_prompt)
+#         ai_output = response.text.strip()
+        
+#         # Parse AI output
+#         lines = ai_output.split('\n')
+#         category, rule = "Unknown", "Check Limitation Act 1908."
+#         period_val, period_unit = 3, "years"
+        
+#         for line in lines:
+#             if "Category:" in line: category = line.split(":", 1)[1].strip()
+#             if "Rule:" in line: rule = line.split(":", 1)[1].strip()
+#             if "Period:" in line:
+#                 parts = line.split(":", 1)[1].strip().split()
+#                 if len(parts) >= 2:
+#                     try:
+#                         period_val = int(parts[0])
+#                         period_unit = parts[1].lower()
+#                     except: pass
+
+#         # Calculate Deadline
+#         from dateutil.relativedelta import relativedelta
+#         if "year" in period_unit:
+#             deadline = incident_date + relativedelta(years=period_val)
+#         elif "month" in period_unit:
+#             deadline = incident_date + relativedelta(months=period_val)
+#         else:
+#             deadline = incident_date + relativedelta(days=period_val)
+
+#         # STRICT Minimalist Format
+#         headers = {
+#             'date': "Incident Date",
+#             'cat': "Detected Category",
+#             'dead': "⚠️ Deadline",
+#             'rule': "Rule"
+#         }
+#         if lang == 'Bangla':
+#             headers = {
+#                 'date': "ঘটনার তারিখ",
+#                 'cat': "শনাক্তকৃত বিভাগ",
+#                 'dead': "⚠️ আইনি সময়সীমা",
+#                 'rule': "নিয়ম"
+#             }
+
+#         reply_msg = (
+#             f"<b>{headers['date']}:</b> {incident_date.strftime('%d/%m/%Y')}\n"
+#             f"<b>{headers['cat']}:</b> {category}\n"
+#             f"<b>{headers['dead']}:</b> {deadline.strftime('%d/%m/%Y')}\n"
+#             f"<b>{headers['rule']}:</b> {rule}"
+#         )
+
+#         await update.message.reply_text(reply_msg, parse_mode="HTML", reply_markup=get_main_menu(lang))
+        
+#     except Exception as e:
+#         logger.error(f"Minimalist Deadline Error: {e}")
+#         await update.message.reply_text("Error calculating deadline. Please consult a lawyer.")
+
+#     context.user_data.pop('deadline_description', None)
+#     return ConversationHandler.END
+
+# async def cancel_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     """Cancel the deadline tracker."""
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+#     if lang == 'Bangla':
+#         await update.message.reply_text("ডেডলাইন ট্র্যাকিং বাতিল করা হয়েছে।", reply_markup=ReplyKeyboardRemove())
+#     else:
+#         await update.message.reply_text("Deadline tracking cancelled.", reply_markup=ReplyKeyboardRemove())
+#     context.user_data.pop('deadline_description', None)
+#     return ConversationHandler.END
+
+# async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+#     msg = "🎙️ Processing your voice note (this might take a few seconds)..." if lang == 'English' else "🎙️ আপনার অডিও বার্তাটি প্রসেস করা হচ্ছে (কয়েক সেকেন্ড সময় লাগতে পারে)..."
+#     status_msg = await update.message.reply_text(msg)
+    
+#     try:
+#         voice = update.message.voice
+#         file = await context.bot.get_file(voice.file_id)
+        
+#         temp_dir = tempfile.gettempdir()
+#         temp_audio_path = os.path.join(temp_dir, f"voice_{user_id}_{voice.file_unique_id}.ogg")
+#         await file.download_to_drive(temp_audio_path)
+        
+#         uploaded_audio = genai.upload_file(path=temp_audio_path)
+        
+#         prompt = "Transcribe the following audio exactly as spoken. If it is in Bangla, return Bangla text. Only return the transcription, nothing else."
+#         transcription_response = model.generate_content([prompt, uploaded_audio])
+#         transcript_text = transcription_response.text.strip()
+        
+#         genai.delete_file(uploaded_audio.name)
+#         os.remove(temp_audio_path)
+        
+#         if not transcript_text:
+#             raise ValueError("Empty transcription")
+            
+#         await status_msg.edit_text(f"📝 <b>Transcription:</b>\n{transcript_text}", parse_mode="HTML")
+        
+#         context.user_data['voice_text'] = transcript_text
+#         await handle_message(update, context)
+        
+#     except Exception as e:
+#         logger.error(f"Voice Analysis Error: {e}", exc_info=True)
+#         error_msg = "Sorry, I couldn't process your voice note. Please try speaking clearly or type your message." if lang == 'English' else "দুঃখিত, আমি আপনার অডিও বার্তাটি বুঝতে পারিনি। দয়া করে পরিষ্কার করে কথা বলুন অথবা লিখে জানান।"
+#         await status_msg.edit_text(error_msg)
+#     finally:
+#         context.user_data.pop('voice_text', None)
+
+# async def show_rights_cards(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Prompt the user to describe what rights they want to know about."""
+#     user_id = update.effective_user.id
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+    
+#     if lang == 'Bangla':
+#         msg = ("📚 **আপনার অধিকার জানুন**\n\n"
+#                "আপনি কোন বিষয়টি সম্পর্কে আপনার আইনি অধিকার জানতে চান, তা নিচে লিখে পাঠান।\n"
+#                "যেমন: 'বেসরকারি চাকরি থেকে বিনা নোটিশে বহিস্কার' অথবা 'পারিবারিক সম্পত্তি বন্টন'।\n\n"
+#                "আমি আপনাকে বাংলাদেশের আইন অনুযায়ী বিস্তারিত একটি রূপরেখা প্রদান করব।")
+#     else:
+#         msg = ("📚 **Know Your Rights**\n\n"
+#                "Please type the legal topic or situation you want to know your rights about.\n"
+#                "Example: 'Fired from private job without notice' or 'Cyberbullying on Facebook'.\n\n"
+#                "I will provide a detailed legal roadmap according to Bangladesh law.")
+        
+#     if update.message:
+#         await update.message.reply_text(msg, parse_mode="Markdown")
+#     else:
+#         await update.callback_query.message.reply_text(msg, parse_mode="Markdown")
+
+# async def prompt_identify_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Prompt user to describe issue for category identification."""
+#     lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+#     msg = "Please describe your incident or legal issue, and I will identify which category of law it belongs to."
+#     if lang == 'Bangla':
+#         msg = "অনুগ্রহ করে আপনার আইনি সমস্যা বা ঘটনাটি বর্ণনা করুন, আমি জানিয়ে দেব এটি কোন আইনি বিভাগের অধীনে পড়ে।"
+#     await update.message.reply_text(msg)
+
+# async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+#     """Handle incoming messages and query Gemini or route menu clicks."""
+#     user_id = update.effective_user.id
+    
+#     is_callback = update.callback_query is not None
+#     if is_callback:
+#         user_text = context.user_data.get('quick_card_text')
+#         reply_func = update.callback_query.message.reply_text
+#     else:
+#         user_text = context.user_data.get('voice_text') or (update.message.text if update.message else None)
+#         reply_func = update.message.reply_text if update.message else None
+
+#     if not user_text:
+#         return
+        
+#     lang = user_prefs.get(user_id, {}).get('lang', 'English')
+
+#     # Route Menu Button Clicks (Fallback for non-conversational buttons)
+#     if not is_callback:
+#         menu_mapping = {
+#             "🚀 Start New": start_new,
+#             "🚀 নতুন করে শুরু করুন": start_new,
+#             "🌐 Change Language": set_language,
+#             "🌐 ভাষা পরিবর্তন": set_language,
+#             "⚖️ Identify Legal Category": prompt_identify_category,
+#             "⚖️ আইনি বিভাগ শনাক্ত করুন": prompt_identify_category,
+#             # KEEPING OLD ONES COMMENTED/HIDDEN BUT FUNCTIONAL IF MANUALLY TRIGGERED
+#             "❓ Help & Features": help_command,
+#             "❓ সাহায্য": help_command,
+#             "🧹 Clear History": clear_history,
+#             "🧹 ইতিহাস মুছুন": clear_history,
+#             "📚 Know Your Rights": show_rights_cards,
+#             "📚 আপনার অধিকার জানুন": show_rights_cards
+#         }
+
+#         if user_text in menu_mapping:
+#             await menu_mapping[user_text](update, context)
+#             return
+
+#     if user_id not in user_history:
+#         user_history[user_id] = []
+
+#     category_list = """
+# 1. Criminal Law (Theft, fraud, assault, Drug offenses, Cybercrime, Bail & trial defense)
+# 2. Civil Law (Property disputes, Contract disputes, Defamation cases, Recovery of money)
+# 3. Family Law (Divorce, Child custody, Alimony, Domestic violence)
+# 4. Corporate / Business Law (Company registration, M&A, Compliance, Shareholder disputes)
+# 5. Property / Real Estate Law (Land ownership, Registration, Tenant-landlord, Land acquisition)
+# 6. Labor & Employment Law (Employee rights, Wrongful termination, Workplace harassment, Union issues)
+# 7. Intellectual Property (IP) Law (Trademark, Copyright, Patent, Brand protection)
+# 8. Tax Law (Income tax, VAT, Tax compliance)
+# 9. Immigration Law (Visa processing, Work permits, Citizenship, Deportation)
+# 10. Cyber Law / IT Law (Online fraud, Data breaches, Digital contracts, Social media issues)
+# 11. Environmental Law (Pollution, Environmental compliance, Industrial regulation)
+# 12. Constitutional / Administrative Law (Fundamental rights, Government decisions, PIL)
+# """
+
+#     # Prepare prompt for SASF LAW FIRM Category Identification
+#     prompt_with_context = f"""
+# You are an AI legal categorizer for SASF LAW FIRM. 
+# Analyze the following user issue and strictly classify it into EXACTLY ONE of the following 12 legal categories:
+# {category_list}
+
+# User Issue: {user_text}
+
+# Respond in {lang}.
+# Start your response with the category name in bold HTML tags, like "<b>[Category Name]</b>".
+# Then briefly explain in 1-2 sentences why it falls under this category.
+# Finally, conclude with: "Please visit the <b>SASF LAW FIRM</b> website and consult with a lawyer specializing in <b>[Category Name]</b>." (Translate to Bangla if lang is Bangla, but keep "<b>SASF LAW FIRM</b>" bold).
+# Do NOT provide full legal advice, roadmaps, or external laws, ONLY the categorization and direction to the website.
+# Use ONLY HTML tags like <b> for bold, do not use Markdown asterisks (**).
+# """
+
+#     # Get response from Gemini
+#     try:
+#         # Use direct generate_content without history to strictly enforce the new category prompt 
+#         # and prevent old conversation instructions (like Plan B/Zimmanama) from bleeding in.
+#         logger.info(f"Querying Gemini for user {user_id}...")
+#         response = model.generate_content(prompt_with_context)
+        
+#         if not response.candidates:
+#             raise ValueError("No response generated by the model (possibly due to safety filters).")
+            
+#         bot_response = response.text
+#         logger.info("Received response from Gemini.")
+
+#         # Update persistent history with CLEAN messages (no RAG context)
+#         # This prevents the history from growing too fast and hitting quota limits
+#         user_history[user_id].clear() # Cleared to ensure fresh state for SASF categorization demo
+#         user_history[user_id].append({"role": "user", "parts": [user_text]})
+#         user_history[user_id].append({"role": "model", "parts": [bot_response]})
+
+#         # Safeguards and Procedural Timeline logic
+#         lower_combined = (user_text + " " + bot_response).lower()
+#         if any(kw in lower_combined for kw in ["forgery", "fake signature", "fraud"]):
+#             bot_response += "\n\n⚠️ <b>Legal Warning:</b> Under Section 193 of the Penal Code 1860, fabricating false evidence is a crime punishable by up to 7 years in prison."
+
+#         # Send response with HTML fallback and emergency button
+#         reply_markup = get_emergency_keyboard()
+#         try:
+#             if reply_func: await reply_func(bot_response, parse_mode="HTML", reply_markup=reply_markup)
+#         except Exception as telegram_err:
+#             logger.warning(f"HTML parsing failed, sending as plain text: {telegram_err}")
+#             if reply_func: await reply_func(bot_response, reply_markup=reply_markup)
+            
+#     except genai.types.generation_types.StopCandidateException as e:
+#         logger.error(f"Safety filters triggered: {e}")
+#         if reply_func: await reply_func("I'm sorry, I cannot provide an answer to that specific query due to safety filters. Please try rephrasing your question.")
+
+#     except Exception as e:
+#         error_msg = str(e)
+#         logger.error(f"Error handling message: {e}", exc_info=True)
+        
+#         if reply_func:
+#             if "429" in error_msg or "quota" in error_msg.lower():
+#                 await reply_func("I'm experiencing high traffic right now and reached my temporary limit. Please try sending your message again in about a minute.")
+#             elif "500" in error_msg or "503" in error_msg:
+#                 await reply_func("The legal brain is a bit busy right now. Please try again in a moment.")
+#             else:
+#                 await reply_func("Sorry, I encountered an error processing your request. Please check the logs or try again.")
+
+# def main() -> None:
+#     """Start the bot."""
+#     token = os.getenv("TELEGRAM_BOT_TOKEN")
+#     if not token:
+#         logger.error("TELEGRAM_BOT_TOKEN not found in environment.")
+#         return
+
+#     application = Application.builder().token(token).build()
+
+#     # Commands
+#     application.add_handler(CommandHandler("start", start))
+#     application.add_handler(CommandHandler("help", help_command))
+#     application.add_handler(CommandHandler("clear", clear_history))
+#     application.add_handler(CommandHandler("language", set_language))
+#     application.add_handler(CallbackQueryHandler(language_button, pattern="^lang_"))
+#     application.add_handler(CallbackQueryHandler(emergency_callback, pattern="^emergency_num$"))
+
+#     # GD Professional Conversation Handler
+#     gd_conv_handler = ConversationHandler(
+#         entry_points=[
+#             CommandHandler('draft_document', start_drafting),
+#             CommandHandler('generate_gd', start_gd),
+#             MessageHandler(filters.Regex(r'^(📄 Professional GD|📄 প্রফেশনাল জিডি \(GD\))$'), start_gd)
+#         ],
+#         states={
+#             ASK_GD_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_date)],
+#             ASK_GD_THANA: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_thana)],
+#             ASK_GD_DISTRICT: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_district)],
+#             ASK_GD_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_name)],
+#             ASK_GD_FATHER: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_father)],
+#             ASK_GD_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_address)],
+#             ASK_GD_INCIDENT_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_incident_date)],
+#             ASK_GD_INCIDENT_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_incident_time)],
+#             ASK_GD_INCIDENT_LOCATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_incident_location)],
+#             ASK_GD_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_description)],
+#             ASK_GD_MOBILE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_gd_mobile)]
+#         },
+#         fallbacks=[CommandHandler('cancel', cancel_gd)]
+#     )
+#     application.add_handler(gd_conv_handler)
+    
+#     # Deadline Tracker Conversation Handler
+#     deadline_conv_handler = ConversationHandler(
+#         entry_points=[
+#             CommandHandler('deadline', start_deadline),
+#             MessageHandler(filters.Regex(r'^(📅 Deadline Tracker|📅 ডেডলাইন ট্র্যাকার)$'), start_deadline)
+#         ],
+#         states={
+#             ASK_DEADLINE_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_deadline_description)],
+#             ASK_DEADLINE_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_deadline_date)]
+#         },
+#         fallbacks=[CommandHandler('cancel', cancel_deadline)]
+#     )
+#     application.add_handler(deadline_conv_handler)
+
+#     application.add_handler(deadline_conv_handler)
+
+#     # Smart Case Analysis Conversation Handler
+#     case_conv_handler = ConversationHandler(
+#         entry_points=[
+#             MessageHandler(filters.Regex(r'^(🔍 Smart Case Analysis|🔍 স্মার্ট কেস বিশ্লেষণ)$'), start_case_analysis)
+#         ],
+#         states={
+#             ASK_CASE_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_case_analysis)]
+#         },
+#         fallbacks=[CommandHandler('cancel', clear_history)] # Fallback to clear if cancelled
+#     )
+#     application.add_handler(case_conv_handler)
+
+#     # Messages
+#     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+#     application.add_handler(MessageHandler(filters.VOICE, handle_voice))
+#     application.add_handler(MessageHandler(filters.LOCATION, handle_location))
+
+#     # Run the bot
+#     application.run_polling()
+
+# if __name__ == "__main__":
+#     main()

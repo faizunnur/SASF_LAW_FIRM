@@ -459,6 +459,24 @@ app.get("/api/appointments", async (req, res) => {
   } catch (e) { res.status(500).json([]); }
 });
 
+app.delete("/api/appointments", async (req, res) => {
+  try {
+    const data = ensureCollections(await getLatestState());
+    const apptId = String(req.query.apptId || "");
+    if (!apptId) return res.status(400).json({ message: "apptId is required." });
+    const idx = data.appointments.findIndex(a => String(a.id || a.appointmentId || "") === apptId);
+    if (idx === -1) return res.status(404).json({ message: "Appointment not found." });
+    const appt = data.appointments[idx];
+    const cancellable = ["Awaiting Assistant Review", "Awaiting Lawyer Review", "Pending"];
+    if (!cancellable.includes(appt.status)) {
+      return res.status(409).json({ message: "Appointment cannot be cancelled at this stage." });
+    }
+    data.appointments.splice(idx, 1);
+    await saveLatestState(data);
+    res.json({ ok: true, apptId });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 app.get("/api/lawyer/profile", async (req, res) => {
   try {
     const lawyerId = req.query.lawyerId;

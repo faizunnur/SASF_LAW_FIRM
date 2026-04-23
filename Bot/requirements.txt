@@ -1,0 +1,9 @@
+python-telegram-bot
+google-generativeai
+chromadb
+python-dotenv
+pypdf
+flask
+python-docx
+fpdf
+python-dateutil

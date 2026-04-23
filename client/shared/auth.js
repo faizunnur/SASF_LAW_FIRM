@@ -6,92 +6,19 @@ const LAWYER_NAME_KEY = "lawyer_name";
 
 function seedDemoData() {
   return {
-    users: [
-      { id: "u-admin", name: "Md. Asif Iqbal", email: "asif@gmail.com", password: "asif123", role: "admin", phone: "01887372093", department: "Admin", verified: true, status: "active" },
-      { id: "u-law-1a", name: "Adv. Rafiqul Islam", email: "rafiq@sasf.com", password: "123", role: "lawyer", phone: "01711000001", department: "Criminal Law", verified: true, status: "active" },
-      { id: "u-law-1b", name: "Adv. Sumaiya Akter", email: "sumaiya@sasf.com", password: "123", role: "lawyer", phone: "01711000002", department: "Criminal Law", verified: true, status: "active" },
-      { id: "u-law-2a", name: "Adv. Tariqul Hasan", email: "tariq@sasf.com", password: "123", role: "lawyer", phone: "01711000003", department: "Civil Law", verified: true, status: "active" },
-      { id: "u-law-2b", name: "Adv. Fatema Zohra", email: "fatema@sasf.com", password: "123", role: "lawyer", phone: "01711000004", department: "Civil Law", verified: true, status: "active" },
-      { id: "u-law-3a", name: "Adv. Nusrat Jahan", email: "nusrat@sasf.com", password: "123", role: "lawyer", phone: "01711000005", department: "Family Law", verified: true, status: "active" },
-      { id: "u-law-3b", name: "Adv. Ariful Islam", email: "arif@sasf.com", password: "123", role: "lawyer", phone: "01711000006", department: "Family Law", verified: true, status: "active" },
-      { id: "u-law-4a", name: "Adv. Mahbub Alam", email: "mahbub@sasf.com", password: "123", role: "lawyer", phone: "01711000007", department: "Corporate / Business Law", verified: true, status: "active" },
-      { id: "u-law-4b", name: "Adv. Farhana Yasmin", email: "farhana@sasf.com", password: "123", role: "lawyer", phone: "01711000008", department: "Corporate / Business Law", verified: true, status: "active" },
-      { id: "u-law-5a", name: "Adv. Zahirul Haque", email: "zahir@sasf.com", password: "123", role: "lawyer", phone: "01711000009", department: "Property / Real Estate Law", verified: true, status: "active" },
-      { id: "u-law-5b", name: "Adv. Rokeya Begum", email: "rokeya@sasf.com", password: "123", role: "lawyer", phone: "01711000010", department: "Property / Real Estate Law", verified: true, status: "active" },
-      { id: "u-law-6a", name: "Adv. Nazmul Huda", email: "nazmul@sasf.com", password: "123", role: "lawyer", phone: "01711000011", department: "Labor & Employment Law", verified: true, status: "active" },
-      { id: "u-law-6b", name: "Adv. Sharmin Akter", email: "sharmin@sasf.com", password: "123", role: "lawyer", phone: "01711000012", department: "Labor & Employment Law", verified: true, status: "active" },
-      { id: "u-law-7a", name: "Adv. Kamrul Hasan", email: "kamrul@sasf.com", password: "123", role: "lawyer", phone: "01711000013", department: "Intellectual Property (IP) Law", verified: true, status: "active" },
-      { id: "u-law-7b", name: "Adv. Tasnim Sultana", email: "tasnim@sasf.com", password: "123", role: "lawyer", phone: "01711000014", department: "Intellectual Property (IP) Law", verified: true, status: "active" },
-      { id: "u-law-8a", name: "Adv. Azizul Hakim", email: "aziz@sasf.com", password: "123", role: "lawyer", phone: "01711000015", department: "Tax Law", verified: true, status: "active" },
-      { id: "u-law-8b", name: "Adv. Sabina Yasmin", email: "sabina@sasf.com", password: "123", role: "lawyer", phone: "01711000016", department: "Tax Law", verified: true, status: "active" },
-      { id: "u-law-9a", name: "Adv. Mokhlesur Rahman", email: "mokhles@sasf.com", password: "123", role: "lawyer", phone: "01711000017", department: "Immigration Law", verified: true, status: "active" },
-      { id: "u-law-9b", name: "Adv. Tanjina Akhter", email: "tanjina@sasf.com", password: "123", role: "lawyer", phone: "01711000018", department: "Immigration Law", verified: true, status: "active" },
-      { id: "u-law-10a", name: "Adv. Shafiul Alam", email: "shafiul@sasf.com", password: "123", role: "lawyer", phone: "01711000019", department: "Cyber Law / IT Law", verified: true, status: "active" },
-      { id: "u-law-10b", name: "Adv. Rezowana Islam", email: "rezowana@sasf.com", password: "123", role: "lawyer", phone: "01711000020", department: "Cyber Law / IT Law", verified: true, status: "active" },
-      { id: "u-law-11a", name: "Adv. Anisur Rahman", email: "anis@sasf.com", password: "123", role: "lawyer", phone: "01711000021", department: "Environmental Law", verified: true, status: "active" },
-      { id: "u-law-11b", name: "Adv. Meherun Nesa", email: "meherun@sasf.com", password: "123", role: "lawyer", phone: "01711000022", department: "Environmental Law", verified: true, status: "active" },
-      { id: "u-law-12a", name: "Adv. Golam Mostafa", email: "golam@sasf.com", password: "123", role: "lawyer", phone: "01711000023", department: "Constitutional / Administrative Law", verified: true, status: "active" },
-      { id: "u-law-12b", name: "Adv. Sayeda Khanom", email: "sayeda@sasf.com", password: "123", role: "lawyer", phone: "01711000024", department: "Constitutional / Administrative Law", verified: true, status: "active" },
-      { id: "u-assistant", name: "Imran Hossain", email: "assistant@lexbridge.com", password: "123456", role: "assistant", phone: "+880 1700-333333", department: "Case Operations", verified: true, status: "active" },
-      { id: "u-client", name: "Sadia Karim", email: "client@lexbridge.com", password: "123456", role: "client", phone: "+880 1700-444444", department: "Client", verified: true, status: "active" }
-    ],
-    cases: [
-      { id: "C-1024", title: "Property Dispute Review", client: "Sadia Karim", clientId: "u-client", lawyerId: "u-lawyer", assistantId: "u-assistant", type: "Civil", priority: "High", status: "In Progress", hearingDate: "2026-04-18", notes: "Evidence checklist updated and hearing prepared." },
-      { id: "C-1025", title: "Startup Incorporation", client: "Sadia Karim", clientId: "u-client", lawyerId: "u-lawyer", assistantId: "u-assistant", type: "Corporate", priority: "Medium", status: "Review", hearingDate: "2026-04-22", notes: "Draft legal structure prepared for approval." },
-      { id: "C-1026", title: "Family Law #201", client: "Sadia Karim", clientId: "u-client", lawyerId: "u-lawyer", assistantId: "u-assistant", type: "Family", priority: "Low", status: "In Progress" }
-    ],
-    appointments: [
-      { id: "A-501", clientId: "u-client", lawyerId: "u-lawyer", assistantId: "u-assistant", date: "2026-04-12", time: "11:00", type: "Consultation", status: "Confirmed", payment: "Paid" }
-    ],
-    schedules: [
-      { id: "S-81", lawyerId: "u-lawyer", title: "Court Hearing: Property Dispute Review", date: "2026-04-18", time: "09:30", category: "Court Date", reminder: "Enabled" },
-      { id: "S-82", lawyerId: "u-lawyer", title: "Client Consultation", date: "2026-04-12", time: "11:00", category: "Appointment", reminder: "Enabled" }
-    ],
-    documents: [
-      { id: "D-900", caseId: "C-1024", ownerId: "u-lawyer", clientId: "u-client", name: "Land Ownership Evidence.pdf", category: "Evidence", updatedOn: "2026-04-02", access: "Client View" }
-    ],
-    notifications: [
-      { id: "N-1", userId: "u-client", title: "Payment Confirmation Notification", message: "Your appointment payment was confirmed successfully.", date: "2026-04-03" },
-      { id: "N-2", userId: "u-lawyer", title: "Hearing Date Notification", message: "Property dispute hearing scheduled for 18 April 2026.", date: "2026-04-03" },
-      { id: "N-3", userId: "u-assistant", title: "Take Appointment Notification", message: "A client requested a new consultation appointment.", date: "2026-04-03" },
-      { id: "N-4", userId: "u-admin", title: "Profile Verifying Notification", message: "A new account requires verification review.", date: "2026-04-03" }
-    ],
-    transactions: [
-      { id: "TX-781", client: "Sadia Karim", amount: 250, status: "Confirmed", date: "2026-04-01" },
-      { id: "TX-782", client: "Barrister Nadia", amount: 1200, status: "Confirmed", date: "2026-04-05" },
-      { id: "TX-783", client: "Imran Hossain", amount: 800, status: "Pending", date: "2026-04-10" }
-    ]
+    users: [],
+    cases: [],
+    appointments: [],
+    schedules: [],
+    documents: [],
+    notifications: [],
+    transactions: []
   };
 }
 
 function getStoredData() {
   const saved = localStorage.getItem(STORAGE_KEY);
-  let data = saved ? JSON.parse(saved) : seedDemoData();
-
-  // Force re-seed if this is a fresh v2 load or if lawyers are missing
-  const lawyerCount = data.users.filter(u => u.role === "lawyer").length;
-  if (!saved || lawyerCount < 20) {
-    console.log("Updating local database with new lawyer roster...");
-    data = seedDemoData();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
-
-  // Ensure the specific admin exists
-  const adminExists = data.users.some(u => u.email === "asif@gmail.com");
-  if (!adminExists) {
-    data.users.push({
-      id: "u-admin-asif",
-      name: "Md. Asif Iqbal",
-      email: "asif@gmail.com",
-      password: "asif123",
-      role: "admin",
-      phone: "01887372093",
-      department: "Admin",
-      verified: true
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
-
+  const data = saved ? JSON.parse(saved) : seedDemoData();
   return data;
 }
 

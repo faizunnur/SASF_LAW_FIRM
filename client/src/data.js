@@ -53,32 +53,6 @@ export const practiceAreas = [
   { id: "p-12", title: "Constitutional Matters", description: "Public law advisory, writ petitions, and administrative challenge proceedings.", icon: "scales" }
 ];
 
-export const lawyers = [
-  { id: "l-1", name: "Ayesha Rahman", image_url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=900&q=80", level: "Senior Partner" },
-  { id: "l-2", name: "Hasib Karim", image_url: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=900&q=80", level: "Litigation Lead" },
-  { id: "l-3", name: "Nusrat Jahan", image_url: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=900&q=80", level: "Senior Associate" },
-  { id: "l-4", name: "Tanvir Hossain", image_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=900&q=80", level: "Corporate Counsel" },
-  { id: "l-5", name: "Farhana Yasmin", image_url: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=900&q=80", level: "Partner" },
-  { id: "l-6", name: "Nazmul Huda", image_url: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=900&q=80", level: "Litigation Counsel" },
-  { id: "l-7", name: "Sabina Yasmin", image_url: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&q=80", level: "Tax Counsel" },
-  { id: "l-8", name: "Mokhlesur Rahman", image_url: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=900&q=80", level: "Senior Partner" },
-  { id: "l-9", name: "Tanjina Akhter", image_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80", level: "Associate" },
-  { id: "l-10", name: "Shafiul Alam", image_url: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=900&q=80", level: "Cyber Counsel" },
-  { id: "l-11", name: "Meherun Nesa", image_url: "https://images.unsplash.com/photo-1573497019236-61f323342eb7?auto=format&fit=crop&w=900&q=80", level: "Counsel" },
-  { id: "l-12", name: "Golam Mostafa", image_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&q=80", level: "Senior Partner" }
-];
-
-export const assistants = [
-  { id: "a-1", name: "Rafi Islam", image_url: "https://images.unsplash.com/photo-1576558656222-ba66febe3dec?auto=format&fit=crop&w=900&q=80", level: "Case Assistant" },
-  { id: "a-2", name: "Maliha Noor", image_url: "https://images.unsplash.com/photo-1542206395-9feb3edaa68d?auto=format&fit=crop&w=900&q=80", level: "Documentation Assistant" },
-  { id: "a-3", name: "Nabila Ahmed", image_url: "https://images.unsplash.com/photo-1525879000488-bff3b1c387cf?auto=format&fit=crop&w=900&q=80", level: "Operations Assistant" },
-  { id: "a-4", name: "Sabbir Rahman", image_url: "https://images.unsplash.com/photo-1615109398623-88346a601842?auto=format&fit=crop&w=900&q=80", level: "Senior Documentation Assistant" },
-  { id: "a-5", name: "Tasnuba Karim", image_url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80", level: "Intake Assistant" },
-  { id: "a-6", name: "Nahid Hasan", image_url: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=900&q=80", level: "Case Assistant" },
-  { id: "a-7", name: "Sanjida Akter", image_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80", level: "Compliance Assistant" },
-  { id: "a-8", name: "Jahidul Islam", image_url: "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?auto=format&fit=crop&w=900&q=80", level: "Case Assistant" }
-];
-
 export const testimonials = [
   { id: "t-1", quote: "SASF transformed a difficult commercial dispute into a controlled, measurable legal process.", clientName: "Farhan Ahmed", caseType: "Commercial Litigation" },
   { id: "t-2", quote: "Every filing and hearing update was clear. The team ran like a premium legal operations unit.", clientName: "Nadia Sultana", caseType: "Property Conflict" },

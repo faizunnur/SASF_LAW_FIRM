@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import { apiRequest } from "./api";
 import {
-  assistants,
   caseHighlights,
   faqs,
-  lawyers,
   pageTabs,
   practiceAreas,
   quotes,
@@ -35,7 +34,7 @@ const CASE_CATEGORIES = [
 ];
 
 export default function App() {
-  const [showAuth, setShowAuth] = useState(false);
+  const navigate = useNavigate();
   const [activePage, setActivePage] = useState("home");
   const [users, setUsers] = useState([]);
   const [sessionUser, setSessionUser] = useState(() => {
@@ -56,25 +55,24 @@ export default function App() {
       .catch(() => {
         if (active) setUsers([]);
       });
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
-  const dbLawyers = useMemo(() => normalizePeople(users, "lawyer", lawyers), [users]);
-  const dbAssistants = useMemo(() => normalizePeople(users, "assistant", assistants), [users]);
-  const assignableLawyers = useMemo(() => {
-    const fromUsers = (Array.isArray(users) ? users : [])
+  const dbLawyers = useMemo(
+    () => (Array.isArray(users) ? users : []).filter((u) => String(u.role || "").toLowerCase() === "lawyer"),
+    [users]
+  );
+  const dbAssistants = useMemo(
+    () => (Array.isArray(users) ? users : []).filter((u) => String(u.role || "").toLowerCase() === "assistant"),
+    [users]
+  );
+  const assignableLawyers = useMemo(
+    () => (Array.isArray(users) ? users : [])
       .filter((u) => String(u.role || "").toLowerCase() === "lawyer")
-      .map((u, idx) => ({
-        label: u.name || `Lawyer ${idx + 1}`,
-        value: u.id || `lawyer-${idx + 1}`
-      }))
-      .filter((l) => l.value);
-
-    if (fromUsers.length) return fromUsers;
-    return lawyers.map((l, idx) => ({ label: l.name || `Lawyer ${idx + 1}`, value: l.id || `lawyer-${idx + 1}` }));
-  }, [users]);
+      .map((u) => ({ label: u.name || "Lawyer", value: u.id }))
+      .filter((l) => l.value),
+    [users]
+  );
 
   useEffect(() => {
     if (sessionUser) {
@@ -86,36 +84,65 @@ export default function App() {
     }
   }, [sessionUser]);
 
-  if (sessionUser) {
-    return (
-      <RoleWorkspace
-        sessionUser={sessionUser}
-        users={users}
-        onLogout={() => {
-          setSessionUser(null);
-          setShowAuth(false);
-        }}
-      />
-    );
-  }
+  const handleLoginSuccess = (payload) => {
+    setSessionUser(payload);
+    navigate(`/${payload.role}`, { replace: true });
+  };
 
-  return showAuth ? (
-    <AuthExperience
-      onBack={() => setShowAuth(false)}
-      availableLawyers={assignableLawyers}
-      onLoginSuccess={(payload) => {
-        setSessionUser(payload);
-        setShowAuth(false);
-      }}
-    />
-  ) : (
-    <WorkspaceLanding
-      onOpenAuth={() => setShowAuth(true)}
-      activePage={activePage}
-      onChangePage={setActivePage}
-      lawyersList={dbLawyers}
-      assistantsList={dbAssistants}
-    />
+  const handleLogout = () => {
+    setSessionUser(null);
+    navigate("/", { replace: true });
+  };
+
+  // Renders a role-protected dashboard; redirects if not logged in or wrong role
+  const protectedDashboard = (requiredRole) => {
+    if (!sessionUser) return <Navigate to="/login" replace />;
+    if (String(sessionUser.role).toLowerCase() !== requiredRole)
+      return <Navigate to={`/${sessionUser.role}`} replace />;
+    return <RoleWorkspace sessionUser={sessionUser} users={users} onLogout={handleLogout} />;
+  };
+
+  return (
+    <Routes>
+      {/* Public landing — redirects to dashboard if already logged in */}
+      <Route
+        path="/"
+        element={
+          sessionUser
+            ? <Navigate to={`/${sessionUser.role}`} replace />
+            : <WorkspaceLanding
+                onOpenAuth={() => navigate("/login")}
+                activePage={activePage}
+                onChangePage={setActivePage}
+                lawyersList={dbLawyers}
+                assistantsList={dbAssistants}
+              />
+        }
+      />
+
+      {/* Login page — redirects to dashboard if already logged in */}
+      <Route
+        path="/login"
+        element={
+          sessionUser
+            ? <Navigate to={`/${sessionUser.role}`} replace />
+            : <AuthExperience
+                onBack={() => navigate("/")}
+                availableLawyers={assignableLawyers}
+                onLoginSuccess={handleLoginSuccess}
+              />
+        }
+      />
+
+      {/* Role-specific dashboards */}
+      <Route path="/client"    element={protectedDashboard("client")} />
+      <Route path="/lawyer"    element={protectedDashboard("lawyer")} />
+      <Route path="/assistant" element={protectedDashboard("assistant")} />
+      <Route path="/admin"     element={protectedDashboard("admin")} />
+
+      {/* Catch-all → home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
@@ -1936,7 +1963,7 @@ function AuthExperience({ onBack, onLoginSuccess, availableLawyers = [] }) {
                     <SelectField
                       name="assigned_lawyer"
                       label="Select Lawyer"
-                      options={availableLawyers.length ? availableLawyers : lawyers.map((l) => ({ label: l.name, value: l.id }))}
+                      options={availableLawyers}
                       placeholder="Choose..."
                     />
                   </div>
@@ -2051,18 +2078,6 @@ function PasswordInput({ name, label, placeholder }) {
     </label>
   );
 }
-function normalizePeople(users, role, fallback) {
-  const filtered = Array.isArray(users) ? users.filter((u) => String(u.role || "").toLowerCase() === role) : [];
-  if (!filtered.length) return fallback;
-  return filtered.map((u, idx) => ({
-    id: u.id || `${role}-${idx}`,
-    name: u.name || `${role} ${idx + 1}`,
-    image_url: u.image_url || fallback[idx % fallback.length]?.image_url || "https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=900&q=80",
-    level: u.level || u.department || (role === "lawyer" ? "Associate" : "Assistant"),
-    department: u.department || "Legal Operations"
-  }));
-}
-
 function AreaIcon({ name }) {
   if (name === "brief") return <BriefIcon />;
   if (name === "scales") return <ScaleIcon />;

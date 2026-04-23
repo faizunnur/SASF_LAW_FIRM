@@ -111,12 +111,12 @@ export default function App() {
           sessionUser
             ? <Navigate to={`/${sessionUser.role}`} replace />
             : <WorkspaceLanding
-                onOpenAuth={() => navigate("/login")}
-                activePage={activePage}
-                onChangePage={setActivePage}
-                lawyersList={dbLawyers}
-                assistantsList={dbAssistants}
-              />
+              onOpenAuth={() => navigate("/login")}
+              activePage={activePage}
+              onChangePage={setActivePage}
+              lawyersList={dbLawyers}
+              assistantsList={dbAssistants}
+            />
         }
       />
 
@@ -127,18 +127,18 @@ export default function App() {
           sessionUser
             ? <Navigate to={`/${sessionUser.role}`} replace />
             : <AuthExperience
-                onBack={() => navigate("/")}
-                availableLawyers={assignableLawyers}
-                onLoginSuccess={handleLoginSuccess}
-              />
+              onBack={() => navigate("/")}
+              availableLawyers={assignableLawyers}
+              onLoginSuccess={handleLoginSuccess}
+            />
         }
       />
 
       {/* Role-specific dashboards */}
-      <Route path="/client"    element={protectedDashboard("client")} />
-      <Route path="/lawyer"    element={protectedDashboard("lawyer")} />
+      <Route path="/client" element={protectedDashboard("client")} />
+      <Route path="/lawyer" element={protectedDashboard("lawyer")} />
       <Route path="/assistant" element={protectedDashboard("assistant")} />
-      <Route path="/admin"     element={protectedDashboard("admin")} />
+      <Route path="/admin" element={protectedDashboard("admin")} />
 
       {/* Catch-all → home */}
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -186,9 +186,8 @@ function WorkspaceLanding({ onOpenAuth, activePage, onChangePage, lawyersList, a
               <button
                 key={tab.id}
                 onClick={() => onChangePage(tab.id)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                  activePage === tab.id ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
-                }`}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${activePage === tab.id ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                  }`}
               >
                 {tab.label}
               </button>
@@ -591,21 +590,21 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
   const [scheduleForm, setScheduleForm] = useState({ lawyerId: "", title: "", date: "", time: "", type: "Meeting" });
   const [docForm, setDocForm] = useState({ caseId: "", title: "", category: "Evidence", file: null });
   const docFileRef = useRef(null);
-  const [adminTab, setAdminTab] = useState("users");
+  const [sidebarPage, setSidebarPage] = useState(
+    role === "client" ? "overview" : role === "assistant" ? "requests" : role === "lawyer" ? "cases" : "users"
+  );
   const [reportType, setReportType] = useState("details");
   const [reportRange, setReportRange] = useState("all");
   const [reportRoleFilter, setReportRoleFilter] = useState("all");
   const [reportStatusFilter, setReportStatusFilter] = useState("all");
   const [reportTxStatus, setReportTxStatus] = useState("all");
   const [reportOutput, setReportOutput] = useState(null);
-  const [assistantPage, setAssistantPage] = useState("requests");
   const [assistantSearch, setAssistantSearch] = useState("");
   const [selectedAssistantCaseId, setSelectedAssistantCaseId] = useState("");
   const [assistantCalendarMonth, setAssistantCalendarMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [clientTab, setClientTab] = useState("overview");
   const [expandedCase, setExpandedCase] = useState(null);
 
   useEffect(() => {
@@ -863,7 +862,7 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
         : a
     );
     await saveAll({ ...db, appointments: nextAppointments }, "Request moved to Appointment Handling.");
-    setAssistantPage("handling");
+    setSidebarPage("handling");
   };
 
   const confirmAppointmentByAssistant = async (appointmentId) => {
@@ -1216,832 +1215,423 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
           ? db.cases.filter((c) => String(c.clientId || "") === String(currentUser.id || ""))
           : db.cases;
 
+  const adminNotifs = role === "admin"
+    ? db.notifications.filter((n) => String(n.userId || "") === String(currentUser.id || "")).sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0))
+    : [];
+  const adminUnread = adminNotifs.filter((n) => !n.isRead && !n.read).length;
+  const navItems = role === "admin"
+    ? [{ id: "users", label: "User Management" }, { id: "reports", label: "Reports" }, { id: "inbox", label: adminUnread > 0 ? `Inbox (${adminUnread})` : "Inbox" }]
+    : role === "lawyer"
+      ? [{ id: "cases", label: "Cases" }, { id: "schedule", label: "Schedule" }, { id: "documents", label: "Documents" }]
+      : role === "assistant"
+        ? [{ id: "requests", label: "Client Requests" }, { id: "handling", label: "Appointments" }, { id: "cases", label: "Cases" }, { id: "documents", label: "Documents" }, { id: "schedule", label: "Lawyer Schedule" }]
+        : [{ id: "overview", label: "Overview" }, { id: "cases", label: "Case Status" }, { id: "documents", label: "Documents" }, { id: "inbox", label: clientUnreadCount > 0 ? `Inbox (${clientUnreadCount})` : "Inbox" }];
+
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${theme.shell} px-4 py-8 sm:px-6 lg:px-8`}>
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_12px_35px_rgba(15,23,42,0.08)]">
+    <div className={`flex min-h-screen bg-gradient-to-br ${theme.shell}`}>
+      {/* Sidebar – desktop */}
+      <aside className="hidden lg:flex w-60 flex-shrink-0 flex-col border-r border-slate-200 bg-white shadow-[4px_0_24px_rgba(15,23,42,0.07)]">
+        <div className="border-b border-slate-200 p-5">
           <div className="flex items-center gap-3">
-            <img src="/uploads/logo.png" alt="SASF Law Firm Logo" className="h-12 w-12 rounded-lg border border-slate-200 object-cover" />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">SASF Law Firm</p>
-              <h1 className="font-serif text-3xl text-slate-900">{roleLabel} Dashboard</h1>
+            <img src="/uploads/logo.png" alt="SASF" className="h-9 w-9 rounded-lg border border-slate-200 object-cover" />
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">SASF Law Firm</p>
+              <p className="truncate font-serif text-base leading-tight text-slate-900">{name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${theme.badge}`}>{roleLabel} Workspace</span>
-            <button onClick={onLogout} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 ${theme.accent}`}>
-              Logout
+          <span className={`mt-3 inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${theme.badge}`}>{roleLabel}</span>
+        </div>
+        <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setSidebarPage(item.id)}
+              className={`w-full rounded-xl px-3 py-2.5 text-left text-sm font-medium transition ${sidebarPage === item.id ? `${theme.accent} text-white` : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}
+            >
+              {item.label}
             </button>
-          </div>
-        </header>
+          ))}
+        </nav>
+        <div className="border-t border-slate-200 p-3">
+          <button onClick={onLogout} className={`w-full rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 ${theme.accent}`}>
+            Logout
+          </button>
+        </div>
+      </aside>
 
-        <section className={`grid gap-4 ${role === "admin" ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
-          <MetricCard label="Signed In As" value={name} />
-          <MetricCard label="Role" value={roleLabel} />
-          <MetricCard label={`Total ${roleLabel}s`} value={String(roleUsers || 1)} />
-          {role === "admin" && <MetricCard label="Platform Users" value={String(db.users.length || 0)} />}
-        </section>
+      {/* Top bar – mobile */}
+      <div className="fixed inset-x-0 top-0 z-40 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur-sm lg:hidden">
+        <div className="flex items-center gap-2">
+          <img src="/uploads/logo.png" alt="" className="h-7 w-7 rounded-md border border-slate-200 object-cover" />
+          <span className="font-serif text-lg text-slate-900">{roleLabel}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${theme.badge}`}>{roleLabel}</span>
+          <button onClick={onLogout} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>Logout</button>
+        </div>
+      </div>
 
-        {notice ? <p className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700">{notice}</p> : null}
-        {loading ? <p className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">Loading workspace data...</p> : null}
+      {/* Bottom nav – mobile */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white/95 backdrop-blur-sm lg:hidden">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setSidebarPage(item.id)}
+            className={`flex-1 py-2.5 text-xs font-semibold transition ${sidebarPage === item.id ? "border-t-2 border-slate-900 bg-slate-50 text-slate-900" : "text-slate-400 hover:text-slate-600"}`}
+          >
+            {item.label.split(" ")[0]}
+          </button>
+        ))}
+      </div>
 
-        {role === "admin" ? (() => {
-          const adminUser = db.users.find((u) => String(u.id) === String(currentUser.id));
-          const adminNotifs = db.notifications
-            .filter((n) => String(n.userId || "") === String(currentUser.id || ""))
-            .sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0));
-          const adminUnread = adminNotifs.filter((n) => !n.isRead && !n.read).length;
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto pb-20 pt-16 lg:pb-6 lg:pt-0">
+        <div className="mx-auto max-w-5xl space-y-6 p-6">
+          <section className={`grid gap-4 ${role === "admin" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+            <MetricCard label="Signed In As" value={name} />
+            <MetricCard label="Role" value={roleLabel} />
+            {role === "admin" && <MetricCard label="Platform Users" value={String(db.users.length || 0)} />}
+          </section>
 
-          return (
-            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
-              <h2 className="font-serif text-4xl text-slate-900">Admin Control Center</h2>
+          {notice ? <p className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700">{notice}</p> : null}
+          {loading ? <p className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">Loading workspace data...</p> : null}
 
-              {/* Tab Bar */}
-              <div className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
-                {[
-                  { id: "users", label: "Users" },
-                  { id: "reports", label: "Reports" },
-                  { id: "inbox", label: adminUnread > 0 ? `Inbox (${adminUnread})` : "Inbox" }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setAdminTab(tab.id)}
-                    className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition ${adminTab === tab.id ? "bg-white text-indigo-700 shadow" : "text-slate-500 hover:text-slate-700"}`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+          {role === "admin" && (
+              <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+                <h2 className="font-serif text-4xl text-slate-900">Admin Control Center</h2>
 
-              {/* Users Tab */}
-              {adminTab === "users" && (
-                <div className="space-y-3">
-                  <p className="text-sm text-slate-600">Edit, disable/enable, and delete non-admin users.</p>
-                  <div className="overflow-auto rounded-xl border border-slate-200">
-                    <table className="min-w-full text-left text-sm">
-                      <thead className="bg-slate-50 text-slate-600">
-                        <tr>
-                          <th className="px-3 py-2">Name</th>
-                          <th className="px-3 py-2">Role</th>
-                          <th className="px-3 py-2">Email</th>
-                          <th className="px-3 py-2">Status</th>
-                          <th className="px-3 py-2">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {db.users.map((u) => (
-                          <tr key={u.id} className="border-t border-slate-200">
-                            <td className="px-3 py-2">{u.name}</td>
-                            <td className="px-3 py-2 capitalize">{u.role}</td>
-                            <td className="px-3 py-2">{u.email}</td>
-                            <td className="px-3 py-2 capitalize">{u.status || "active"}</td>
-                            <td className="px-3 py-2">
-                              {String(u.role || "").toLowerCase() === "admin" ? (
-                                <span className="text-xs text-slate-400">Owner</span>
-                              ) : (
-                                <div className="flex flex-wrap gap-2">
-                                  <button onClick={() => editUser(u.id)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700">Edit</button>
-                                  <button onClick={() => toggleUserStatus(u.id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>
-                                    {(u.status || "active") === "blocked" ? "Enable" : "Disable"}
-                                  </button>
-                                  <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700">Delete</button>
-                                </div>
-                              )}
-                            </td>
+                {/* Users Tab */}
+                {sidebarPage === "users" && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-slate-600">Edit, disable/enable, and delete non-admin users.</p>
+                    <div className="overflow-auto rounded-xl border border-slate-200">
+                      <table className="min-w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-slate-600">
+                          <tr>
+                            <th className="px-3 py-2">Name</th>
+                            <th className="px-3 py-2">Role</th>
+                            <th className="px-3 py-2">Email</th>
+                            <th className="px-3 py-2">Status</th>
+                            <th className="px-3 py-2">Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {db.users.map((u) => (
+                            <tr key={u.id} className="border-t border-slate-200">
+                              <td className="px-3 py-2">{u.name}</td>
+                              <td className="px-3 py-2 capitalize">{u.role}</td>
+                              <td className="px-3 py-2">{u.email}</td>
+                              <td className="px-3 py-2 capitalize">{u.status || "active"}</td>
+                              <td className="px-3 py-2">
+                                {String(u.role || "").toLowerCase() === "admin" ? (
+                                  <span className="text-xs text-slate-400">Owner</span>
+                                ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => editUser(u.id)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700">Edit</button>
+                                    <button onClick={() => toggleUserStatus(u.id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>
+                                      {(u.status || "active") === "blocked" ? "Enable" : "Disable"}
+                                    </button>
+                                    <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700">Delete</button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Reports Tab */}
-              {adminTab === "reports" && (
-                <div className="space-y-4">
-                  {/* Report controls */}
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-slate-600">Report Type</label>
-                      <select value={reportType} onChange={(e) => { setReportType(e.target.value); setReportOutput(null); }} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                        <option value="details">User &amp; Case Activity</option>
-                        <option value="transactions">Transaction Report</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-semibold text-slate-600">Date Range</label>
-                      <select value={reportRange} onChange={(e) => setReportRange(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                        <option value="all">All Time</option>
-                        <option value="month">This Month</option>
-                        <option value="30d">Last 30 Days</option>
-                      </select>
-                    </div>
-                    {reportType === "details" && (
-                      <>
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold text-slate-600">Role Filter</label>
-                          <select value={reportRoleFilter} onChange={(e) => setReportRoleFilter(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                            <option value="all">All Roles</option>
-                            <option value="client">Client</option>
-                            <option value="lawyer">Lawyer</option>
-                            <option value="assistant">Assistant</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-xs font-semibold text-slate-600">Case Status</label>
-                          <select value={reportStatusFilter} onChange={(e) => setReportStatusFilter(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                            <option value="all">All Statuses</option>
-                            <option>Open</option>
-                            <option>In Progress</option>
-                            <option>Pending</option>
-                            <option>Pending Lawyer Review</option>
-                            <option>Closed</option>
-                          </select>
-                        </div>
-                      </>
-                    )}
-                    {reportType === "transactions" && (
+                {/* Reports Tab */}
+                {sidebarPage === "reports" && (
+                  <div className="space-y-4">
+                    {/* Report controls */}
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                       <div>
-                        <label className="mb-1 block text-xs font-semibold text-slate-600">TX Status</label>
-                        <select value={reportTxStatus} onChange={(e) => setReportTxStatus(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                          <option value="all">All</option>
-                          <option>Pending</option>
-                          <option>Completed</option>
-                          <option>Failed</option>
+                        <label className="mb-1 block text-xs font-semibold text-slate-600">Report Type</label>
+                        <select value={reportType} onChange={(e) => { setReportType(e.target.value); setReportOutput(null); }} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                          <option value="details">User &amp; Case Activity</option>
+                          <option value="transactions">Transaction Report</option>
                         </select>
                       </div>
-                    )}
-                  </div>
-                  <button onClick={generateReport} className={`rounded-xl px-5 py-2.5 text-sm font-semibold text-white ${theme.accent}`}>
-                    Generate Report
-                  </button>
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold text-slate-600">Date Range</label>
+                        <select value={reportRange} onChange={(e) => setReportRange(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                          <option value="all">All Time</option>
+                          <option value="month">This Month</option>
+                          <option value="30d">Last 30 Days</option>
+                        </select>
+                      </div>
+                      {reportType === "details" && (
+                        <>
+                          <div>
+                            <label className="mb-1 block text-xs font-semibold text-slate-600">Role Filter</label>
+                            <select value={reportRoleFilter} onChange={(e) => setReportRoleFilter(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                              <option value="all">All Roles</option>
+                              <option value="client">Client</option>
+                              <option value="lawyer">Lawyer</option>
+                              <option value="assistant">Assistant</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-semibold text-slate-600">Case Status</label>
+                            <select value={reportStatusFilter} onChange={(e) => setReportStatusFilter(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                              <option value="all">All Statuses</option>
+                              <option>Open</option>
+                              <option>In Progress</option>
+                              <option>Pending</option>
+                              <option>Pending Lawyer Review</option>
+                              <option>Closed</option>
+                            </select>
+                          </div>
+                        </>
+                      )}
+                      {reportType === "transactions" && (
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-slate-600">TX Status</label>
+                          <select value={reportTxStatus} onChange={(e) => setReportTxStatus(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                            <option value="all">All</option>
+                            <option>Pending</option>
+                            <option>Completed</option>
+                            <option>Failed</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                    <button onClick={generateReport} className={`rounded-xl px-5 py-2.5 text-sm font-semibold text-white ${theme.accent}`}>
+                      Generate Report
+                    </button>
 
-                  {/* Report Output */}
-                  {reportOutput && reportOutput.type === "details" && (
-                    <div className="space-y-4">
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Users Matched</p>
-                          <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.users.length}</p>
-                          <div className="mt-2 space-y-1">
-                            {Object.entries(reportOutput.usersByRole).map(([r, c]) => (
-                              <p key={r} className="text-xs text-slate-600 capitalize">{r}: {c}</p>
-                            ))}
+                    {/* Report Output */}
+                    {reportOutput && reportOutput.type === "details" && (
+                      <div className="space-y-4">
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Users Matched</p>
+                            <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.users.length}</p>
+                            <div className="mt-2 space-y-1">
+                              {Object.entries(reportOutput.usersByRole).map(([r, c]) => (
+                                <p key={r} className="text-xs text-slate-600 capitalize">{r}: {c}</p>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Cases Matched</p>
+                            <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.cases.length}</p>
+                            <div className="mt-2 space-y-1">
+                              {Object.entries(reportOutput.casesByStatus).map(([s, c]) => (
+                                <p key={s} className="text-xs text-slate-600">{s}: {c}</p>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Appointments</p>
+                            <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.appointments.length}</p>
+                            <div className="mt-2 space-y-1">
+                              {Object.entries(reportOutput.apptsByStatus).map(([s, c]) => (
+                                <p key={s} className="text-xs text-slate-600">{s}: {c}</p>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Cases Matched</p>
-                          <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.cases.length}</p>
-                          <div className="mt-2 space-y-1">
-                            {Object.entries(reportOutput.casesByStatus).map(([s, c]) => (
-                              <p key={s} className="text-xs text-slate-600">{s}: {c}</p>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Appointments</p>
-                          <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.appointments.length}</p>
-                          <div className="mt-2 space-y-1">
-                            {Object.entries(reportOutput.apptsByStatus).map(([s, c]) => (
-                              <p key={s} className="text-xs text-slate-600">{s}: {c}</p>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="overflow-auto rounded-xl border border-slate-200">
-                        <table className="min-w-full text-left text-xs">
-                          <thead className="bg-slate-50 text-slate-500">
-                            <tr>
-                              <th className="px-3 py-2">Name</th>
-                              <th className="px-3 py-2">Role</th>
-                              <th className="px-3 py-2">Email</th>
-                              <th className="px-3 py-2">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {reportOutput.users.map((u) => (
-                              <tr key={u.id} className="border-t border-slate-200">
-                                <td className="px-3 py-2">{u.name}</td>
-                                <td className="px-3 py-2 capitalize">{u.role}</td>
-                                <td className="px-3 py-2">{u.email}</td>
-                                <td className="px-3 py-2 capitalize">{u.status || "active"}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      {reportOutput.cases.length > 0 && (
                         <div className="overflow-auto rounded-xl border border-slate-200">
                           <table className="min-w-full text-left text-xs">
                             <thead className="bg-slate-50 text-slate-500">
                               <tr>
-                                <th className="px-3 py-2">Case Title</th>
-                                <th className="px-3 py-2">Type</th>
+                                <th className="px-3 py-2">Name</th>
+                                <th className="px-3 py-2">Role</th>
+                                <th className="px-3 py-2">Email</th>
                                 <th className="px-3 py-2">Status</th>
-                                <th className="px-3 py-2">Priority</th>
-                                <th className="px-3 py-2">Hearing Date</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {reportOutput.cases.map((c) => (
-                                <tr key={getCaseId(c)} className="border-t border-slate-200">
-                                  <td className="px-3 py-2">{c.title || "Untitled"}</td>
-                                  <td className="px-3 py-2">{c.caseType || c.type || "—"}</td>
-                                  <td className="px-3 py-2">{c.status}</td>
-                                  <td className="px-3 py-2">{c.priority || "—"}</td>
-                                  <td className="px-3 py-2">{c.hearingDate || "—"}</td>
+                              {reportOutput.users.map((u) => (
+                                <tr key={u.id} className="border-t border-slate-200">
+                                  <td className="px-3 py-2">{u.name}</td>
+                                  <td className="px-3 py-2 capitalize">{u.role}</td>
+                                  <td className="px-3 py-2">{u.email}</td>
+                                  <td className="px-3 py-2 capitalize">{u.status || "active"}</td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
                         </div>
-                      )}
-                    </div>
-                  )}
-
-                  {reportOutput && reportOutput.type === "transactions" && (
-                    <div className="space-y-4">
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Transactions</p>
-                          <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.transactions.length}</p>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Amount</p>
-                          <p className="mt-1 text-3xl font-bold text-slate-900">৳{reportOutput.totalAmount.toLocaleString()}</p>
-                        </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">By Status</p>
-                          <div className="mt-2 space-y-1">
-                            {Object.entries(reportOutput.byStatus).map(([s, v]) => (
-                              <p key={s} className="text-xs text-slate-600">{s}: {v.count} (৳{Number(v.amount).toLocaleString()})</p>
-                            ))}
+                        {reportOutput.cases.length > 0 && (
+                          <div className="overflow-auto rounded-xl border border-slate-200">
+                            <table className="min-w-full text-left text-xs">
+                              <thead className="bg-slate-50 text-slate-500">
+                                <tr>
+                                  <th className="px-3 py-2">Case Title</th>
+                                  <th className="px-3 py-2">Type</th>
+                                  <th className="px-3 py-2">Status</th>
+                                  <th className="px-3 py-2">Priority</th>
+                                  <th className="px-3 py-2">Hearing Date</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {reportOutput.cases.map((c) => (
+                                  <tr key={getCaseId(c)} className="border-t border-slate-200">
+                                    <td className="px-3 py-2">{c.title || "Untitled"}</td>
+                                    <td className="px-3 py-2">{c.caseType || c.type || "—"}</td>
+                                    <td className="px-3 py-2">{c.status}</td>
+                                    <td className="px-3 py-2">{c.priority || "—"}</td>
+                                    <td className="px-3 py-2">{c.hearingDate || "—"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
-                        </div>
+                        )}
                       </div>
-                      <div className="overflow-auto rounded-xl border border-slate-200">
-                        <table className="min-w-full text-left text-xs">
-                          <thead className="bg-slate-50 text-slate-500">
-                            <tr>
-                              <th className="px-3 py-2">ID</th>
-                              <th className="px-3 py-2">Client</th>
-                              <th className="px-3 py-2">Amount</th>
-                              <th className="px-3 py-2">Status</th>
-                              <th className="px-3 py-2">Date</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {reportOutput.transactions.map((t) => (
-                              <tr key={t.transactionId || t.id} className="border-t border-slate-200">
-                                <td className="px-3 py-2 font-mono">{t.transactionId || t.id}</td>
-                                <td className="px-3 py-2">{t.clientName || "—"}</td>
-                                <td className="px-3 py-2">৳{Number(t.amount || 0).toLocaleString()}</td>
-                                <td className="px-3 py-2">{t.status}</td>
-                                <td className="px-3 py-2">{t.txDate || t.tx_date || t.date || "—"}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
 
-              {/* Inbox Tab */}
-              {adminTab === "inbox" && (
-                <div className="space-y-3">
-                  {adminNotifs.length === 0 ? (
-                    <p className="text-sm text-slate-500">No notifications yet.</p>
-                  ) : (
-                    adminNotifs.map((n) => (
-                      <div
-                        key={n.id || n.notifId}
-                        className={`rounded-xl border px-4 py-3 ${(!n.isRead && !n.read) ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-slate-800">{n.title}</p>
-                            <p className="mt-0.5 text-xs text-slate-600">{n.message}</p>
-                            <p className="mt-1 text-xs text-slate-400">{n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString() : "")}</p>
+                    {reportOutput && reportOutput.type === "transactions" && (
+                      <div className="space-y-4">
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Transactions</p>
+                            <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.transactions.length}</p>
                           </div>
-                          {(!n.isRead && !n.read) && (
-                            <button
-                              onClick={() => markNotificationRead(n.id || n.notifId)}
-                              className="shrink-0 rounded-lg border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700"
-                            >
-                              Mark read
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </section>
-          );
-        })() : null}
-
-        {role === "lawyer" ? (
-          <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
-            <h2 className="font-serif text-4xl text-slate-900">Case Control</h2>
-            <p className="text-sm text-slate-600">Cases are created by assistants after category-based request review. Lawyer can update progress and status.</p>
-            <div className="space-y-3">
-              {lawyerCases.length ? lawyerCases.map((c) => {
-                const id = getCaseId(c);
-                return (
-                  <div key={id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-base font-semibold text-slate-900">{c.title || "Untitled Case"}</p>
-                    <p className="text-xs text-slate-500">Case ID: {id}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-3">
-                      <span className="text-sm text-slate-600">Client: {c.clientName || c.client || "Client"}</span>
-                      <select value={c.status || "Open"} onChange={(e) => updateCaseStatus(id, e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1 text-sm">
-                        <option>Open</option>
-                        <option>In Progress</option>
-                        <option>Pending</option>
-                        <option>Closed</option>
-                      </select>
-                      <button onClick={() => updateCaseProgress(id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>
-                        Update Progress
-                      </button>
-                    </div>
-                    <p className="mt-2 text-xs text-slate-500">Progress: {c.progressNote || c.notes || "No progress note yet."}</p>
-                  </div>
-                );
-              }) : <p className="text-sm text-slate-500">No assigned cases yet.</p>}
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="mb-3 text-sm font-semibold text-slate-800">Manage My Schedule</p>
-              <form onSubmit={createSchedule} className="grid gap-3 md:grid-cols-4">
-                <input value={scheduleForm.title} onChange={(e) => setScheduleForm((p) => ({ ...p, title: e.target.value }))} placeholder="Event title" required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                <input type="date" value={scheduleForm.date} onChange={(e) => setScheduleForm((p) => ({ ...p, date: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                <input type="time" value={scheduleForm.time} onChange={(e) => setScheduleForm((p) => ({ ...p, time: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Add Event</button>
-              </form>
-              <div className="mt-3 space-y-2">
-                {visibleSchedules.map((s) => (
-                  <div key={getScheduleId(s)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-                    <span className="text-sm text-slate-700">{s.title} - {s.date} {s.time}</span>
-                    <div className="flex gap-2">
-                      <button onClick={() => editSchedule(getScheduleId(s))} className="rounded border border-slate-300 px-2 py-1 text-xs">Edit</button>
-                      <button onClick={() => deleteSchedule(getScheduleId(s))} className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600">Delete</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="mb-3 text-sm font-semibold text-slate-800">Documents</p>
-              <form onSubmit={addDocument} className="grid gap-3 md:grid-cols-4">
-                <select value={docForm.caseId} onChange={(e) => setDocForm((p) => ({ ...p, caseId: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                  <option value="">Select case</option>
-                  {docsCaseOptions.map((c) => <option key={getCaseId(c)} value={getCaseId(c)}>{c.title}</option>)}
-                </select>
-                <input value={docForm.title} onChange={(e) => setDocForm((p) => ({ ...p, title: e.target.value }))} placeholder="Document title" required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                <select value={docForm.category} onChange={(e) => setDocForm((p) => ({ ...p, category: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                  <option>Evidence</option><option>Contract</option><option>Notice</option><option>Other</option>
-                </select>
-                <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Submit</button>
-                <input ref={docFileRef} type="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.pptx" onChange={(e) => setDocForm((p) => ({ ...p, file: e.target.files[0] || null }))} className="col-span-full cursor-pointer rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700" />
-              </form>
-              <div className="mt-3 space-y-2">
-                {visibleDocs.map((d) => (
-                  <div key={getDocId(d)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-                    <span className="text-sm text-slate-700">{d.name || d.title} ({d.category || d.fileType || "Doc"})</span>
-                    <div className="flex gap-2">
-                      {d.fileUrl && <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded border border-slate-300 px-2 py-1 text-xs">View</a>}
-                      <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1 text-xs">Rename</button>
-                      <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600">Delete</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        ) : null}
-
-        {role === "assistant" ? (
-          <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-serif text-4xl text-slate-900">Assistant Dashboard</h2>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-              <input
-                value={assistantSearch}
-                onChange={(e) => setAssistantSearch(e.target.value)}
-                placeholder="Search requests, cases, dates..."
-                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
-              />
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-600">
-                Assigned Lawyer: {lawyersOnly.find((l) => String(l.id) === String(currentUser.lawyerId || ""))?.name || "Not assigned"}
-              </div>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              {[
-                ["requests", "Initial Page"],
-                ["handling", "Appointment Handling"],
-                ["cases", "Case Controller"],
-                ["documents", "Document Controller"],
-                ["schedule", "Lawyer Schedule"]
-              ].map(([id, label]) => (
-                <button
-                  key={id}
-                  onClick={() => setAssistantPage(id)}
-                  className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                    assistantPage === id ? `${theme.accent} border-transparent text-white` : "border-slate-300 bg-white text-slate-700"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {assistantPage === "requests" ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-800">1. Initial Page - Client Book Requests</p>
-                <div className="mt-3 space-y-3">
-                  {assistantRequestsFiltered.length ? assistantRequestsFiltered.map((a) => {
-                    const id = getApptId(a);
-                    return (
-                      <div key={id} className="rounded-lg border border-slate-200 bg-white px-3 py-3">
-                        <p className="text-sm font-semibold text-slate-900">{a.type} - {a.date} {a.time}</p>
-                        <p className="text-xs text-slate-500">Status: {a.status || "Awaiting Assistant Review"}</p>
-                        <button onClick={() => selectRequestForHandling(id)} className={`mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>
-                          Select
-                        </button>
-                      </div>
-                    );
-                  }) : <p className="text-sm text-slate-500">No assigned client requests.</p>}
-                </div>
-              </div>
-            ) : null}
-
-            {assistantPage === "handling" ? (
-              <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-800">2. Appointment Handling</p>
-                <div className="space-y-3">
-                  {assistantHandlingFiltered.length ? assistantHandlingFiltered.map((a) => {
-                    const id = getApptId(a);
-                    return (
-                      <div key={id} className="rounded-lg border border-slate-200 bg-white px-3 py-3">
-                        <p className="text-sm font-semibold text-slate-900">{a.type} - {a.date} {a.time}</p>
-                        <p className="text-xs text-slate-500">Status: {a.status || "Handling"}</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <button onClick={() => communicateWithClient(id)} className="rounded border border-slate-300 px-3 py-1.5 text-xs">Communicate</button>
-                          <button onClick={() => confirmAppointmentByAssistant(id)} className="rounded border border-emerald-300 px-3 py-1.5 text-xs text-emerald-700">Confirm</button>
-                          <button
-                            onClick={async () => {
-                              await createCaseFromRequest(id);
-                              setAssistantPage("cases");
-                            }}
-                            className={`rounded px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}
-                          >
-                            Take Case
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }) : <p className="text-sm text-slate-500">No appointments in handling queue.</p>}
-                </div>
-              </div>
-            ) : null}
-
-            {assistantPage === "cases" ? (
-              <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-800">3. Case Controller</p>
-                <div className="space-y-3">
-                  {assistantCasesFiltered.length ? assistantCasesFiltered.map((c) => {
-                    const id = getCaseId(c);
-                    return (
-                      <div key={id} className="rounded-lg border border-slate-200 bg-white px-3 py-3">
-                        <p className="text-sm font-semibold text-slate-900">{c.title} ({id})</p>
-                        <p className="text-xs text-slate-500">Client: {c.clientName || c.client || "Client"}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <select
-                            value={c.status || "Pending"}
-                            onChange={(e) => updateCaseStatus(id, e.target.value)}
-                            className="rounded border border-slate-300 px-2 py-1 text-xs"
-                          >
-                            <option>Pending</option>
-                            <option>In Progress</option>
-                            <option>On Hold</option>
-                            <option>Closed</option>
-                          </select>
-                          <button onClick={() => setSelectedAssistantCaseId(id)} className="rounded border border-slate-300 px-3 py-1.5 text-xs">Open in Document Controller</button>
-                        </div>
-                      </div>
-                    );
-                  }) : <p className="text-sm text-slate-500">No taken cases yet.</p>}
-                </div>
-              </div>
-            ) : null}
-
-            {assistantPage === "documents" ? (
-              <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-800">4. Document Controller</p>
-                <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
-                  <div className="space-y-2">
-                    {assistantDocsCasesFiltered.length ? assistantDocsCasesFiltered.map((c) => {
-                      const id = getCaseId(c);
-                      const isActive = String(selectedAssistantCaseId) === id;
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => setSelectedAssistantCaseId(id)}
-                          className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${
-                            isActive ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-800"
-                          }`}
-                        >
-                          {c.title} ({id})
-                        </button>
-                      );
-                    }) : <p className="text-sm text-slate-500">No cases to manage documents.</p>}
-                  </div>
-                  <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
-                    {selectedAssistantCase ? (
-                      <>
-                        <p className="text-sm font-semibold text-slate-900">{selectedAssistantCase.title} ({getCaseId(selectedAssistantCase)})</p>
-                        <p className="text-xs text-slate-500">{selectedAssistantCase.notes || "No case details yet."}</p>
-                        <button onClick={() => updateAssistantCaseData(getCaseId(selectedAssistantCase))} className="rounded border border-slate-300 px-3 py-1.5 text-xs">
-                          View/Edit Case Data
-                        </button>
-
-                        <form onSubmit={addDocument} className="grid gap-2 sm:grid-cols-3">
-                          <input type="hidden" value={selectedAssistantCaseId} />
-                          <select value={docForm.caseId} onChange={(e) => setDocForm((p) => ({ ...p, caseId: e.target.value }))} className="rounded border border-slate-300 px-2 py-1.5 text-xs">
-                            <option value="">Select case</option>
-                            {assistantDocsCasesFiltered.map((c) => <option key={getCaseId(c)} value={getCaseId(c)}>{c.title}</option>)}
-                          </select>
-                          <input value={docForm.title} onChange={(e) => setDocForm((p) => ({ ...p, title: e.target.value }))} placeholder="Doc title" className="rounded border border-slate-300 px-2 py-1.5 text-xs" />
-                          <button className={`rounded px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>Submit Doc</button>
-                          <input ref={docFileRef} type="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.pptx" onChange={(e) => setDocForm((p) => ({ ...p, file: e.target.files[0] || null }))} className="col-span-full cursor-pointer rounded border border-slate-300 px-2 py-1.5 text-xs text-slate-500 file:mr-2 file:cursor-pointer file:rounded file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700" />
-                        </form>
-                        <div className="space-y-2">
-                          {selectedAssistantCaseDocs.length ? selectedAssistantCaseDocs.map((d) => (
-                            <div key={getDocId(d)} className="flex items-center justify-between gap-2 rounded border border-slate-200 px-2 py-1.5 text-xs">
-                              <span>{d.name || d.title}</span>
-                              <div className="flex gap-2">
-                                {d.fileUrl && <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded border border-slate-300 px-2 py-1">View</a>}
-                                <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1">Edit</button>
-                                <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-rose-600">Delete</button>
-                              </div>
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Amount</p>
+                            <p className="mt-1 text-3xl font-bold text-slate-900">৳{reportOutput.totalAmount.toLocaleString()}</p>
+                          </div>
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">By Status</p>
+                            <div className="mt-2 space-y-1">
+                              {Object.entries(reportOutput.byStatus).map(([s, v]) => (
+                                <p key={s} className="text-xs text-slate-600">{s}: {v.count} (৳{Number(v.amount).toLocaleString()})</p>
+                              ))}
                             </div>
-                          )) : <p className="text-xs text-slate-500">No documents for selected case.</p>}
+                          </div>
                         </div>
-                      </>
-                    ) : (
-                      <p className="text-sm text-slate-500">Select a case to view/edit case data and documents.</p>
+                        <div className="overflow-auto rounded-xl border border-slate-200">
+                          <table className="min-w-full text-left text-xs">
+                            <thead className="bg-slate-50 text-slate-500">
+                              <tr>
+                                <th className="px-3 py-2">ID</th>
+                                <th className="px-3 py-2">Client</th>
+                                <th className="px-3 py-2">Amount</th>
+                                <th className="px-3 py-2">Status</th>
+                                <th className="px-3 py-2">Date</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {reportOutput.transactions.map((t) => (
+                                <tr key={t.transactionId || t.id} className="border-t border-slate-200">
+                                  <td className="px-3 py-2 font-mono">{t.transactionId || t.id}</td>
+                                  <td className="px-3 py-2">{t.clientName || "—"}</td>
+                                  <td className="px-3 py-2">৳{Number(t.amount || 0).toLocaleString()}</td>
+                                  <td className="px-3 py-2">{t.status}</td>
+                                  <td className="px-3 py-2">{t.txDate || t.tx_date || t.date || "—"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
-              </div>
-            ) : null}
-
-            {assistantPage === "schedule" ? (
-              <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-800">5. Lawyer Schedule</p>
-                <p className="text-xs text-slate-500">Red-marked dates indicate the assigned lawyer is busy.</p>
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => setAssistantCalendarMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-                    className="rounded border border-slate-300 px-3 py-1.5 text-xs"
-                  >
-                    Prev
-                  </button>
-                  <p className="text-sm font-semibold text-slate-800">
-                    {assistantCalendarMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
-                  </p>
-                  <button
-                    onClick={() => setAssistantCalendarMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-                    className="rounded border border-slate-300 px-3 py-1.5 text-xs"
-                  >
-                    Next
-                  </button>
-                </div>
-                <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-500">
-                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d}>{d}</div>)}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                  {(() => {
-                    const y = assistantCalendarMonth.getFullYear();
-                    const m = assistantCalendarMonth.getMonth();
-                    const firstDay = new Date(y, m, 1).getDay();
-                    const daysInMonth = new Date(y, m + 1, 0).getDate();
-                    const cells = [];
-                    for (let i = 0; i < firstDay; i += 1) cells.push(<div key={`p-${i}`} className="h-9 rounded bg-transparent" />);
-                    for (let d = 1; d <= daysInMonth; d += 1) {
-                      const dateStr = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-                      const busy = visibleSchedules.some((s) => String(s.date || "") === dateStr);
-                      cells.push(
-                        <div key={dateStr} className={`grid h-9 place-items-center rounded text-xs ${busy ? "bg-rose-500 text-white" : "border border-slate-200 bg-white text-slate-700"}`}>
-                          {d}
-                        </div>
-                      );
-                    }
-                    return cells;
-                  })()}
-                </div>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {role === "client" ? (
-          <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-serif text-4xl text-slate-900">Client Portal</h2>
-              <div className="flex items-center gap-3">
-                {clientUnreadCount > 0 && (
-                  <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-bold text-white">
-                    {clientUnreadCount} unread {clientUnreadCount === 1 ? "message" : "messages"}
-                  </span>
                 )}
-                <a
-                  href="https://t.me/SASF_lawfirm_bot"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="Chat on Telegram"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#229ED9] text-white shadow transition hover:bg-[#1a8bbf]"
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                  </svg>
-                </a>
-              </div>
-            </div>
 
-            <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1">
-              {[
-                { id: "overview", label: "Overview" },
-                { id: "cases", label: "Case Status" },
-                { id: "documents", label: "Documents" },
-                { id: "inbox", label: clientUnreadCount > 0 ? `Inbox (${clientUnreadCount})` : "Inbox" }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setClientTab(tab.id)}
-                  className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition ${clientTab === tab.id ? `text-white ${theme.accent}` : "text-slate-600 hover:text-slate-900"}`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {clientTab === "overview" && (
-              <div className="space-y-5">
-                <div>
-                  <p className="mb-3 text-sm font-semibold text-slate-700">Request New Appointment</p>
-                  <form onSubmit={bookAppointmentAsClient} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <select
-                      value={apptForm.lawyerId}
-                      onChange={(e) => setApptForm((p) => ({ ...p, lawyerId: e.target.value }))}
-                      required
-                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      <option value="">— Select Lawyer —</option>
-                      {lawyersOnly.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.name}{l.department ? ` · ${l.department}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={apptForm.type}
-                      onChange={(e) => setApptForm((p) => ({ ...p, type: e.target.value }))}
-                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                    >
-                      {CASE_CATEGORIES.map((category) => (
-                        <option key={category} value={category}>{category}</option>
-                      ))}
-                    </select>
-                    <input
-                      type="date"
-                      value={apptForm.date}
-                      onChange={(e) => setApptForm((p) => ({ ...p, date: e.target.value }))}
-                      required
-                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="time"
-                      value={apptForm.time}
-                      onChange={(e) => setApptForm((p) => ({ ...p, time: e.target.value }))}
-                      required
-                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                    />
-                    {apptForm.lawyerId && (() => {
-                      const assignedAst = db.users.find(
-                        (u) => String(u.role || "").toLowerCase() === "assistant" && String(u.lawyerId || "") === String(apptForm.lawyerId)
-                      );
-                      return (
-                        <p className="col-span-full text-xs text-slate-500">
-                          {assignedAst
-                            ? `Request will go to ${assignedAst.name} (assistant) for approval.`
-                            : "Request will go directly to the selected lawyer for approval."}
-                        </p>
-                      );
-                    })()}
-                    <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>
-                      Request Appointment
-                    </button>
-                  </form>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">My Appointments</p>
-                  <div className="mt-3 space-y-2">
-                    {clientAppointments.length ? clientAppointments.map((a) => {
-                      const aId = getApptId(a);
-                      const isCancellable = ["Awaiting Assistant Review", "Awaiting Lawyer Review", "Pending"].includes(a.status);
-                      const apptLawyer = db.users.find((u) => String(u.id) === String(a.lawyerId || ""));
-                      return (
-                        <div key={aId} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                          <div className="flex flex-wrap items-start justify-between gap-2">
+                {/* Inbox Tab */}
+                {sidebarPage === "inbox" && (
+                  <div className="space-y-3">
+                    {adminNotifs.length === 0 ? (
+                      <p className="text-sm text-slate-500">No notifications yet.</p>
+                    ) : (
+                      adminNotifs.map((n) => (
+                        <div
+                          key={n.id || n.notifId}
+                          className={`rounded-xl border px-4 py-3 ${(!n.isRead && !n.read) ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-sm font-medium text-slate-900">{a.type} — {a.date} at {a.time}</p>
-                              {apptLawyer && <p className="mt-0.5 text-xs text-slate-500">Lawyer: {apptLawyer.name}</p>}
-                              <p className="mt-0.5 text-xs text-slate-500">Status: {a.status || "Pending"}</p>
+                              <p className="text-sm font-semibold text-slate-800">{n.title}</p>
+                              <p className="mt-0.5 text-xs text-slate-600">{n.message}</p>
+                              <p className="mt-1 text-xs text-slate-400">{n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString() : "")}</p>
                             </div>
-                            {isCancellable && (
+                            {(!n.isRead && !n.read) && (
                               <button
-                                onClick={() => cancelAppointment(aId)}
-                                className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50"
+                                onClick={() => markNotificationRead(n.id || n.notifId)}
+                                className="shrink-0 rounded-lg border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700"
                               >
-                                Cancel
+                                Mark read
                               </button>
                             )}
                           </div>
                         </div>
-                      );
-                    }) : <p className="text-sm text-slate-500">No appointments booked yet.</p>}
+                      ))
+                    )}
                   </div>
-                </div>
-              </div>
-            )}
+                )}
+              </section>
+          )}
 
-            {clientTab === "cases" && (
+          {role === "lawyer" && sidebarPage === "cases" && (
+            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+              <h2 className="font-serif text-4xl text-slate-900">Cases</h2>
+              <p className="text-sm text-slate-600">Cases are created by assistants after category-based request review. Lawyer can update progress and status.</p>
               <div className="space-y-3">
-                {clientCases.length ? clientCases.map((c) => {
-                  const cId = getCaseId(c);
-                  const isExpanded = expandedCase === cId;
-                  const statusColorMap = {
-                    "Open": "bg-blue-100 text-blue-800",
-                    "In Progress": "bg-amber-100 text-amber-800",
-                    "Review": "bg-purple-100 text-purple-800",
-                    "Pending": "bg-slate-100 text-slate-700",
-                    "Pending Lawyer Review": "bg-orange-100 text-orange-800",
-                    "Closed": "bg-green-100 text-green-800",
-                    "On Hold": "bg-rose-100 text-rose-800",
-                    "Accepted by Assistant": "bg-teal-100 text-teal-800"
-                  };
-                  const statusColor = statusColorMap[c.status] || "bg-slate-100 text-slate-700";
-                  const assignedLawyer = db.users.find((u) => String(u.id || "") === String(c.lawyerId || ""));
-                  const assignedAssistant = db.users.find((u) => String(u.id || "") === String(c.assistantId || ""));
+                {lawyerCases.length ? lawyerCases.map((c) => {
+                  const id = getCaseId(c);
                   return (
-                    <div key={cId} className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
-                      <button
-                        onClick={() => setExpandedCase(isExpanded ? null : cId)}
-                        className="flex w-full items-center justify-between px-4 py-3 text-left"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColor}`}>
-                            {c.status || "In Progress"}
-                          </span>
-                          <p className="text-sm font-semibold text-slate-900">{c.title || "Untitled Case"}</p>
-                        </div>
-                        <span className="ml-3 flex-shrink-0 text-xs text-slate-400">{isExpanded ? "▲" : "▼"}</span>
-                      </button>
-                      {isExpanded && (
-                        <div className="border-t border-slate-200 bg-white px-4 py-4 space-y-3">
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                            <div><span className="text-slate-500">Case ID:</span><span className="ml-1 font-medium text-slate-800">{cId}</span></div>
-                            <div><span className="text-slate-500">Type:</span><span className="ml-1 font-medium text-slate-800">{c.type || c.caseType || "—"}</span></div>
-                            <div><span className="text-slate-500">Priority:</span><span className="ml-1 font-medium text-slate-800">{c.priority || "—"}</span></div>
-                            <div><span className="text-slate-500">Hearing Date:</span><span className="ml-1 font-medium text-slate-800">{c.hearingDate || "—"}</span></div>
-                            {assignedLawyer && <div><span className="text-slate-500">Assigned Lawyer:</span><span className="ml-1 font-medium text-slate-800">{assignedLawyer.name}</span></div>}
-                            {assignedAssistant && <div><span className="text-slate-500">Assigned Assistant:</span><span className="ml-1 font-medium text-slate-800">{assignedAssistant.name}</span></div>}
-                            {c.lastUpdated && (
-                              <div className="col-span-2"><span className="text-slate-500">Last Updated:</span><span className="ml-1 font-medium text-slate-800">{new Date(c.lastUpdated).toLocaleString()}</span></div>
-                            )}
-                          </div>
-                          {(c.progressNote || c.notes) && (
-                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Progress Update</p>
-                              <p className="text-sm text-slate-700">{c.progressNote || c.notes}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                    <div key={id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-base font-semibold text-slate-900">{c.title || "Untitled Case"}</p>
+                      <p className="text-xs text-slate-500">Case ID: {id}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <span className="text-sm text-slate-600">Client: {c.clientName || c.client || "Client"}</span>
+                        <select value={c.status || "Open"} onChange={(e) => updateCaseStatus(id, e.target.value)} className="rounded-lg border border-slate-300 px-2 py-1 text-sm">
+                          <option>Open</option>
+                          <option>In Progress</option>
+                          <option>Pending</option>
+                          <option>Closed</option>
+                        </select>
+                        <button onClick={() => updateCaseProgress(id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>
+                          Update Progress
+                        </button>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">Progress: {c.progressNote || c.notes || "No progress note yet."}</p>
                     </div>
                   );
-                }) : <p className="text-sm text-slate-500">No active cases yet.</p>}
+                }) : <p className="text-sm text-slate-500">No assigned cases yet.</p>}
               </div>
-            )}
+            </section>
+          )}
 
-            {clientTab === "documents" && (
-              <div className="space-y-4">
+          {role === "lawyer" && sidebarPage === "schedule" && (
+            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+              <h2 className="font-serif text-4xl text-slate-900">Schedule</h2>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="mb-3 text-sm font-semibold text-slate-800">Manage My Schedule</p>
+                <form onSubmit={createSchedule} className="grid gap-3 md:grid-cols-4">
+                  <input value={scheduleForm.title} onChange={(e) => setScheduleForm((p) => ({ ...p, title: e.target.value }))} placeholder="Event title" required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                  <input type="date" value={scheduleForm.date} onChange={(e) => setScheduleForm((p) => ({ ...p, date: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                  <input type="time" value={scheduleForm.time} onChange={(e) => setScheduleForm((p) => ({ ...p, time: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                  <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Add Event</button>
+                </form>
+                <div className="mt-3 space-y-2">
+                  {visibleSchedules.map((s) => (
+                    <div key={getScheduleId(s)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <span className="text-sm text-slate-700">{s.title} - {s.date} {s.time}</span>
+                      <div className="flex gap-2">
+                        <button onClick={() => editSchedule(getScheduleId(s))} className="rounded border border-slate-300 px-2 py-1 text-xs">Edit</button>
+                        <button onClick={() => deleteSchedule(getScheduleId(s))} className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600">Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {role === "lawyer" && sidebarPage === "documents" && (
+            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+              <h2 className="font-serif text-4xl text-slate-900">Documents</h2>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="mb-3 text-sm font-semibold text-slate-800">Documents</p>
                 <form onSubmit={addDocument} className="grid gap-3 md:grid-cols-4">
                   <select value={docForm.caseId} onChange={(e) => setDocForm((p) => ({ ...p, caseId: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     <option value="">Select case</option>
@@ -2049,76 +1639,487 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                   </select>
                   <input value={docForm.title} onChange={(e) => setDocForm((p) => ({ ...p, title: e.target.value }))} placeholder="Document title" required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
                   <select value={docForm.category} onChange={(e) => setDocForm((p) => ({ ...p, category: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                    <option>Evidence</option><option>Identity</option><option>Contract</option><option>Other</option>
+                    <option>Evidence</option><option>Contract</option><option>Notice</option><option>Other</option>
                   </select>
-                  <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Upload</button>
+                  <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Submit</button>
                   <input ref={docFileRef} type="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.pptx" onChange={(e) => setDocForm((p) => ({ ...p, file: e.target.files[0] || null }))} className="col-span-full cursor-pointer rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700" />
                 </form>
-                <div className="space-y-2">
-                  {visibleDocs.length ? visibleDocs.map((d) => (
-                    <div key={getDocId(d)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                      <div>
-                        <span className="text-sm text-slate-700">{d.name || d.title}</span>
-                        {(d.category || d.fileType) && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">{d.category || d.fileType}</span>}
-                      </div>
+                <div className="mt-3 space-y-2">
+                  {visibleDocs.map((d) => (
+                    <div key={getDocId(d)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <span className="text-sm text-slate-700">{d.name || d.title} ({d.category || d.fileType || "Doc"})</span>
                       <div className="flex gap-2">
                         {d.fileUrl && <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded border border-slate-300 px-2 py-1 text-xs">View</a>}
                         <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1 text-xs">Rename</button>
                         <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600">Delete</button>
                       </div>
                     </div>
-                  )) : <p className="text-sm text-slate-500">No documents uploaded yet.</p>}
+                  ))}
                 </div>
               </div>
-            )}
+            </section>
+          )}
 
-            {clientTab === "inbox" && (
-              <div className="space-y-3">
-                {clientNotifications.length > 0 && (
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-slate-500">{clientNotifications.length} {clientNotifications.length === 1 ? "message" : "messages"}</p>
-                    {clientUnreadCount > 0 && (
-                      <button onClick={markAllNotificationsRead} className="text-xs text-slate-500 underline hover:text-slate-800">
-                        Mark all as read
-                      </button>
-                    )}
-                  </div>
-                )}
-                {clientNotifications.length ? clientNotifications.map((n) => {
-                  const isUnread = !n.isRead && !n.read;
-                  return (
-                    <div
-                      key={n.id}
-                      className={`rounded-xl border p-4 ${isUnread ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-slate-50"}`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            {isUnread && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-rose-500" />}
-                            <p className="text-sm font-semibold text-slate-900">{n.title || "Message"}</p>
-                          </div>
-                          <p className="mt-1 text-sm text-slate-700">{n.message}</p>
-                          <p className="mt-1.5 text-xs text-slate-400">
-                            {n.createdAt ? new Date(n.createdAt).toLocaleString() : n.date || ""}
-                          </p>
-                        </div>
-                        {isUnread && (
-                          <button
-                            onClick={() => markNotificationRead(n.id)}
-                            className="flex-shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:border-slate-400"
-                          >
-                            Mark read
+          {role === "assistant" && (
+            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-serif text-4xl text-slate-900">Assistant Dashboard</h2>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                <input
+                  value={assistantSearch}
+                  onChange={(e) => setAssistantSearch(e.target.value)}
+                  placeholder="Search requests, cases, dates..."
+                  className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm"
+                />
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-600">
+                  Assigned Lawyer: {lawyersOnly.find((l) => String(l.id) === String(currentUser.lawyerId || ""))?.name || "Not assigned"}
+                </div>
+              </div>
+
+              {sidebarPage === "requests" ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-800">1. Initial Page - Client Book Requests</p>
+                  <div className="mt-3 space-y-3">
+                    {assistantRequestsFiltered.length ? assistantRequestsFiltered.map((a) => {
+                      const id = getApptId(a);
+                      return (
+                        <div key={id} className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                          <p className="text-sm font-semibold text-slate-900">{a.type} - {a.date} {a.time}</p>
+                          <p className="text-xs text-slate-500">Status: {a.status || "Awaiting Assistant Review"}</p>
+                          <button onClick={() => selectRequestForHandling(id)} className={`mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>
+                            Select
                           </button>
+                        </div>
+                      );
+                    }) : <p className="text-sm text-slate-500">No assigned client requests.</p>}
+                  </div>
+                </div>
+              ) : null}
+
+              {sidebarPage === "handling" ? (
+                <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-800">2. Appointment Handling</p>
+                  <div className="space-y-3">
+                    {assistantHandlingFiltered.length ? assistantHandlingFiltered.map((a) => {
+                      const id = getApptId(a);
+                      return (
+                        <div key={id} className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                          <p className="text-sm font-semibold text-slate-900">{a.type} - {a.date} {a.time}</p>
+                          <p className="text-xs text-slate-500">Status: {a.status || "Handling"}</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <button onClick={() => communicateWithClient(id)} className="rounded border border-slate-300 px-3 py-1.5 text-xs">Communicate</button>
+                            <button onClick={() => confirmAppointmentByAssistant(id)} className="rounded border border-emerald-300 px-3 py-1.5 text-xs text-emerald-700">Confirm</button>
+                            <button
+                              onClick={async () => {
+                                await createCaseFromRequest(id);
+                                setSidebarPage("cases");
+                              }}
+                              className={`rounded px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}
+                            >
+                              Take Case
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }) : <p className="text-sm text-slate-500">No appointments in handling queue.</p>}
+                  </div>
+                </div>
+              ) : null}
+
+              {sidebarPage === "cases" ? (
+                <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-800">3. Case Controller</p>
+                  <div className="space-y-3">
+                    {assistantCasesFiltered.length ? assistantCasesFiltered.map((c) => {
+                      const id = getCaseId(c);
+                      return (
+                        <div key={id} className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                          <p className="text-sm font-semibold text-slate-900">{c.title} ({id})</p>
+                          <p className="text-xs text-slate-500">Client: {c.clientName || c.client || "Client"}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <select
+                              value={c.status || "Pending"}
+                              onChange={(e) => updateCaseStatus(id, e.target.value)}
+                              className="rounded border border-slate-300 px-2 py-1 text-xs"
+                            >
+                              <option>Pending</option>
+                              <option>In Progress</option>
+                              <option>On Hold</option>
+                              <option>Closed</option>
+                            </select>
+                            <button onClick={() => setSelectedAssistantCaseId(id)} className="rounded border border-slate-300 px-3 py-1.5 text-xs">Open in Document Controller</button>
+                          </div>
+                        </div>
+                      );
+                    }) : <p className="text-sm text-slate-500">No taken cases yet.</p>}
+                  </div>
+                </div>
+              ) : null}
+
+              {sidebarPage === "documents" ? (
+                <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-800">4. Document Controller</p>
+                  <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr]">
+                    <div className="space-y-2">
+                      {assistantDocsCasesFiltered.length ? assistantDocsCasesFiltered.map((c) => {
+                        const id = getCaseId(c);
+                        const isActive = String(selectedAssistantCaseId) === id;
+                        return (
+                          <button
+                            key={id}
+                            onClick={() => setSelectedAssistantCaseId(id)}
+                            className={`w-full rounded-lg border px-3 py-2 text-left text-sm ${isActive ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-800"
+                              }`}
+                          >
+                            {c.title} ({id})
+                          </button>
+                        );
+                      }) : <p className="text-sm text-slate-500">No cases to manage documents.</p>}
+                    </div>
+                    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+                      {selectedAssistantCase ? (
+                        <>
+                          <p className="text-sm font-semibold text-slate-900">{selectedAssistantCase.title} ({getCaseId(selectedAssistantCase)})</p>
+                          <p className="text-xs text-slate-500">{selectedAssistantCase.notes || "No case details yet."}</p>
+                          <button onClick={() => updateAssistantCaseData(getCaseId(selectedAssistantCase))} className="rounded border border-slate-300 px-3 py-1.5 text-xs">
+                            View/Edit Case Data
+                          </button>
+
+                          <form onSubmit={addDocument} className="grid gap-2 sm:grid-cols-3">
+                            <input type="hidden" value={selectedAssistantCaseId} />
+                            <select value={docForm.caseId} onChange={(e) => setDocForm((p) => ({ ...p, caseId: e.target.value }))} className="rounded border border-slate-300 px-2 py-1.5 text-xs">
+                              <option value="">Select case</option>
+                              {assistantDocsCasesFiltered.map((c) => <option key={getCaseId(c)} value={getCaseId(c)}>{c.title}</option>)}
+                            </select>
+                            <input value={docForm.title} onChange={(e) => setDocForm((p) => ({ ...p, title: e.target.value }))} placeholder="Doc title" className="rounded border border-slate-300 px-2 py-1.5 text-xs" />
+                            <button className={`rounded px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>Submit Doc</button>
+                            <input ref={docFileRef} type="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.pptx" onChange={(e) => setDocForm((p) => ({ ...p, file: e.target.files[0] || null }))} className="col-span-full cursor-pointer rounded border border-slate-300 px-2 py-1.5 text-xs text-slate-500 file:mr-2 file:cursor-pointer file:rounded file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700" />
+                          </form>
+                          <div className="space-y-2">
+                            {selectedAssistantCaseDocs.length ? selectedAssistantCaseDocs.map((d) => (
+                              <div key={getDocId(d)} className="flex items-center justify-between gap-2 rounded border border-slate-200 px-2 py-1.5 text-xs">
+                                <span>{d.name || d.title}</span>
+                                <div className="flex gap-2">
+                                  {d.fileUrl && <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded border border-slate-300 px-2 py-1">View</a>}
+                                  <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1">Edit</button>
+                                  <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-rose-600">Delete</button>
+                                </div>
+                              </div>
+                            )) : <p className="text-xs text-slate-500">No documents for selected case.</p>}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-sm text-slate-500">Select a case to view/edit case data and documents.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {sidebarPage === "schedule" ? (
+                <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-semibold text-slate-800">5. Lawyer Schedule</p>
+                  <p className="text-xs text-slate-500">Red-marked dates indicate the assigned lawyer is busy.</p>
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setAssistantCalendarMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+                      className="rounded border border-slate-300 px-3 py-1.5 text-xs"
+                    >
+                      Prev
+                    </button>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {assistantCalendarMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+                    </p>
+                    <button
+                      onClick={() => setAssistantCalendarMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+                      className="rounded border border-slate-300 px-3 py-1.5 text-xs"
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-500">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d}>{d}</div>)}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {(() => {
+                      const y = assistantCalendarMonth.getFullYear();
+                      const m = assistantCalendarMonth.getMonth();
+                      const firstDay = new Date(y, m, 1).getDay();
+                      const daysInMonth = new Date(y, m + 1, 0).getDate();
+                      const cells = [];
+                      for (let i = 0; i < firstDay; i += 1) cells.push(<div key={`p-${i}`} className="h-9 rounded bg-transparent" />);
+                      for (let d = 1; d <= daysInMonth; d += 1) {
+                        const dateStr = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                        const busy = visibleSchedules.some((s) => String(s.date || "") === dateStr);
+                        cells.push(
+                          <div key={dateStr} className={`grid h-9 place-items-center rounded text-xs ${busy ? "bg-rose-500 text-white" : "border border-slate-200 bg-white text-slate-700"}`}>
+                            {d}
+                          </div>
+                        );
+                      }
+                      return cells;
+                    })()}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          )}
+
+          {role === "client" && (
+            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-serif text-4xl text-slate-900">Client Portal</h2>
+                <div className="flex items-center gap-3">
+                  {clientUnreadCount > 0 && (
+                    <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-bold text-white">
+                      {clientUnreadCount} unread {clientUnreadCount === 1 ? "message" : "messages"}
+                    </span>
+                  )}
+                  <a
+                    href="https://t.me/SASF_lawfirm_bot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Chat on Telegram"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#229ED9] text-white shadow transition hover:bg-[#1a8bbf]"
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+                      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+
+              {sidebarPage === "overview" && (
+                <div className="space-y-5">
+                  <div>
+                    <p className="mb-3 text-sm font-semibold text-slate-700">Request New Appointment</p>
+                    <form onSubmit={bookAppointmentAsClient} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <select
+                        value={apptForm.lawyerId}
+                        onChange={(e) => setApptForm((p) => ({ ...p, lawyerId: e.target.value }))}
+                        required
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                      >
+                        <option value="">— Select Lawyer —</option>
+                        {lawyersOnly.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}{l.department ? ` · ${l.department}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={apptForm.type}
+                        onChange={(e) => setApptForm((p) => ({ ...p, type: e.target.value }))}
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                      >
+                        {CASE_CATEGORIES.map((category) => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="date"
+                        value={apptForm.date}
+                        onChange={(e) => setApptForm((p) => ({ ...p, date: e.target.value }))}
+                        required
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                      />
+                      <input
+                        type="time"
+                        value={apptForm.time}
+                        onChange={(e) => setApptForm((p) => ({ ...p, time: e.target.value }))}
+                        required
+                        className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                      />
+                      {apptForm.lawyerId && (() => {
+                        const assignedAst = db.users.find(
+                          (u) => String(u.role || "").toLowerCase() === "assistant" && String(u.lawyerId || "") === String(apptForm.lawyerId)
+                        );
+                        return (
+                          <p className="col-span-full text-xs text-slate-500">
+                            {assignedAst
+                              ? `Request will go to ${assignedAst.name} (assistant) for approval.`
+                              : "Request will go directly to the selected lawyer for approval."}
+                          </p>
+                        );
+                      })()}
+                      <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>
+                        Request Appointment
+                      </button>
+                    </form>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">My Appointments</p>
+                    <div className="mt-3 space-y-2">
+                      {clientAppointments.length ? clientAppointments.map((a) => {
+                        const aId = getApptId(a);
+                        const isCancellable = ["Awaiting Assistant Review", "Awaiting Lawyer Review", "Pending"].includes(a.status);
+                        const apptLawyer = db.users.find((u) => String(u.id) === String(a.lawyerId || ""));
+                        return (
+                          <div key={aId} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div>
+                                <p className="text-sm font-medium text-slate-900">{a.type} — {a.date} at {a.time}</p>
+                                {apptLawyer && <p className="mt-0.5 text-xs text-slate-500">Lawyer: {apptLawyer.name}</p>}
+                                <p className="mt-0.5 text-xs text-slate-500">Status: {a.status || "Pending"}</p>
+                              </div>
+                              {isCancellable && (
+                                <button
+                                  onClick={() => cancelAppointment(aId)}
+                                  className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }) : <p className="text-sm text-slate-500">No appointments booked yet.</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {sidebarPage === "cases" && (
+                <div className="space-y-3">
+                  {clientCases.length ? clientCases.map((c) => {
+                    const cId = getCaseId(c);
+                    const isExpanded = expandedCase === cId;
+                    const statusColorMap = {
+                      "Open": "bg-blue-100 text-blue-800",
+                      "In Progress": "bg-amber-100 text-amber-800",
+                      "Review": "bg-purple-100 text-purple-800",
+                      "Pending": "bg-slate-100 text-slate-700",
+                      "Pending Lawyer Review": "bg-orange-100 text-orange-800",
+                      "Closed": "bg-green-100 text-green-800",
+                      "On Hold": "bg-rose-100 text-rose-800",
+                      "Accepted by Assistant": "bg-teal-100 text-teal-800"
+                    };
+                    const statusColor = statusColorMap[c.status] || "bg-slate-100 text-slate-700";
+                    const assignedLawyer = db.users.find((u) => String(u.id || "") === String(c.lawyerId || ""));
+                    const assignedAssistant = db.users.find((u) => String(u.id || "") === String(c.assistantId || ""));
+                    return (
+                      <div key={cId} className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+                        <button
+                          onClick={() => setExpandedCase(isExpanded ? null : cId)}
+                          className="flex w-full items-center justify-between px-4 py-3 text-left"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColor}`}>
+                              {c.status || "In Progress"}
+                            </span>
+                            <p className="text-sm font-semibold text-slate-900">{c.title || "Untitled Case"}</p>
+                          </div>
+                          <span className="ml-3 flex-shrink-0 text-xs text-slate-400">{isExpanded ? "▲" : "▼"}</span>
+                        </button>
+                        {isExpanded && (
+                          <div className="border-t border-slate-200 bg-white px-4 py-4 space-y-3">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                              <div><span className="text-slate-500">Case ID:</span><span className="ml-1 font-medium text-slate-800">{cId}</span></div>
+                              <div><span className="text-slate-500">Type:</span><span className="ml-1 font-medium text-slate-800">{c.type || c.caseType || "—"}</span></div>
+                              <div><span className="text-slate-500">Priority:</span><span className="ml-1 font-medium text-slate-800">{c.priority || "—"}</span></div>
+                              <div><span className="text-slate-500">Hearing Date:</span><span className="ml-1 font-medium text-slate-800">{c.hearingDate || "—"}</span></div>
+                              {assignedLawyer && <div><span className="text-slate-500">Assigned Lawyer:</span><span className="ml-1 font-medium text-slate-800">{assignedLawyer.name}</span></div>}
+                              {assignedAssistant && <div><span className="text-slate-500">Assigned Assistant:</span><span className="ml-1 font-medium text-slate-800">{assignedAssistant.name}</span></div>}
+                              {c.lastUpdated && (
+                                <div className="col-span-2"><span className="text-slate-500">Last Updated:</span><span className="ml-1 font-medium text-slate-800">{new Date(c.lastUpdated).toLocaleString()}</span></div>
+                              )}
+                            </div>
+                            {(c.progressNote || c.notes) && (
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Progress Update</p>
+                                <p className="text-sm text-slate-700">{c.progressNote || c.notes}</p>
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
+                    );
+                  }) : <p className="text-sm text-slate-500">No active cases yet.</p>}
+                </div>
+              )}
+
+              {sidebarPage === "documents" && (
+                <div className="space-y-4">
+                  <form onSubmit={addDocument} className="grid gap-3 md:grid-cols-4">
+                    <select value={docForm.caseId} onChange={(e) => setDocForm((p) => ({ ...p, caseId: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                      <option value="">Select case</option>
+                      {docsCaseOptions.map((c) => <option key={getCaseId(c)} value={getCaseId(c)}>{c.title}</option>)}
+                    </select>
+                    <input value={docForm.title} onChange={(e) => setDocForm((p) => ({ ...p, title: e.target.value }))} placeholder="Document title" required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    <select value={docForm.category} onChange={(e) => setDocForm((p) => ({ ...p, category: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                      <option>Evidence</option><option>Identity</option><option>Contract</option><option>Other</option>
+                    </select>
+                    <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Upload</button>
+                    <input ref={docFileRef} type="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.pptx" onChange={(e) => setDocForm((p) => ({ ...p, file: e.target.files[0] || null }))} className="col-span-full cursor-pointer rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700" />
+                  </form>
+                  <div className="space-y-2">
+                    {visibleDocs.length ? visibleDocs.map((d) => (
+                      <div key={getDocId(d)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                        <div>
+                          <span className="text-sm text-slate-700">{d.name || d.title}</span>
+                          {(d.category || d.fileType) && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">{d.category || d.fileType}</span>}
+                        </div>
+                        <div className="flex gap-2">
+                          {d.fileUrl && <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded border border-slate-300 px-2 py-1 text-xs">View</a>}
+                          <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1 text-xs">Rename</button>
+                          <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600">Delete</button>
+                        </div>
+                      </div>
+                    )) : <p className="text-sm text-slate-500">No documents uploaded yet.</p>}
+                  </div>
+                </div>
+              )}
+
+              {sidebarPage === "inbox" && (
+                <div className="space-y-3">
+                  {clientNotifications.length > 0 && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-slate-500">{clientNotifications.length} {clientNotifications.length === 1 ? "message" : "messages"}</p>
+                      {clientUnreadCount > 0 && (
+                        <button onClick={markAllNotificationsRead} className="text-xs text-slate-500 underline hover:text-slate-800">
+                          Mark all as read
+                        </button>
+                      )}
                     </div>
-                  );
-                }) : <p className="text-sm text-slate-500">Your inbox is empty.</p>}
-              </div>
-            )}
-          </section>
-        ) : null}
-      </div>
+                  )}
+                  {clientNotifications.length ? clientNotifications.map((n) => {
+                    const isUnread = !n.isRead && !n.read;
+                    return (
+                      <div
+                        key={n.id}
+                        className={`rounded-xl border p-4 ${isUnread ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-slate-50"}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {isUnread && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-rose-500" />}
+                              <p className="text-sm font-semibold text-slate-900">{n.title || "Message"}</p>
+                            </div>
+                            <p className="mt-1 text-sm text-slate-700">{n.message}</p>
+                            <p className="mt-1.5 text-xs text-slate-400">
+                              {n.createdAt ? new Date(n.createdAt).toLocaleString() : n.date || ""}
+                            </p>
+                          </div>
+                          {isUnread && (
+                            <button
+                              onClick={() => markNotificationRead(n.id)}
+                              className="flex-shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:border-slate-400"
+                            >
+                              Mark read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }) : <p className="text-sm text-slate-500">Your inbox is empty.</p>}
+                </div>
+              )}
+            </section>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

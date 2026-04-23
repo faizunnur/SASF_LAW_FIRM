@@ -591,10 +591,12 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
   const [docForm, setDocForm] = useState({ caseId: "", title: "", category: "Evidence", file: null });
   const docFileRef = useRef(null);
   const [sidebarPage, setSidebarPage] = useState(
-    role === "client" ? "overview" : role === "assistant" ? "requests" : role === "lawyer" ? "cases" : "users"
+    role === "client" ? "appointment" : role === "assistant" ? "requests" : role === "lawyer" ? "cases" : "users"
   );
   const [reportType, setReportType] = useState("details");
-  const [reportRange, setReportRange] = useState("all");
+  const [reportRange, setReportRange] = useState("last30");
+  const [userSearch, setUserSearch] = useState("");
+  const [confirmDlg, setConfirmDlg] = useState(null);
   const [reportRoleFilter, setReportRoleFilter] = useState("all");
   const [reportStatusFilter, setReportStatusFilter] = useState("all");
   const [reportTxStatus, setReportTxStatus] = useState("all");
@@ -656,6 +658,27 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
     if (message) setNotice(message);
   };
 
+  const openConfirm = (title, message) => new Promise((resolve) => setConfirmDlg({ title, message, resolve }));
+
+  const saveUserProfile = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const nextUsers = db.users.map((u) =>
+      String(u.id || "") === String(currentUser.id || "")
+        ? { ...u, name: fd.get("name") || u.name, email: fd.get("email") || u.email, phone: fd.get("phone") || "", department: fd.get("department") || "" }
+        : u
+    );
+    await saveAll({ ...db, users: nextUsers }, "Profile updated.");
+  };
+
+  const changeUserRole = async (targetId, newRole) => {
+    if (role !== "admin") return;
+    const nextUsers = db.users.map((u) =>
+      String(u.id) === String(targetId) ? { ...u, role: newRole } : u
+    );
+    await saveAll({ ...db, users: nextUsers }, "Role updated.");
+  };
+
   const makeAdminNotif = (title, message, currentDb) => {
     const source = currentDb || db;
     const adminUser = source.users.find((u) => String(u.role || "").toLowerCase() === "admin");
@@ -679,8 +702,15 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
       if (!dateStr) return false;
       const d = new Date(dateStr);
       if (isNaN(d)) return false;
-      if (reportRange === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-      if (reportRange === "30d") { const cut = new Date(now); cut.setDate(cut.getDate() - 30); return d >= cut; }
+      const rangeDays = { today: 0, last7: 7, last15: 15, last30: 30, "3months": 90, "6months": 180, month: 30, "30d": 30 };
+      if (reportRange === "today") {
+        const start = new Date(now); start.setHours(0, 0, 0, 0);
+        return d >= start;
+      }
+      if (rangeDays[reportRange] !== undefined) {
+        const cut = new Date(now); cut.setDate(cut.getDate() - rangeDays[reportRange]);
+        return d >= cut;
+      }
       return true;
     };
 
@@ -784,7 +814,7 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
       return;
     }
 
-    const approved = window.confirm(`Delete ${user.name}? This will remove related cases, appointments, schedules, documents, and notifications.`);
+    const approved = await openConfirm("Delete User", `Delete ${user.name}? This will remove all related cases, appointments, documents, and notifications.`);
     if (!approved) return;
 
     const nextUsers = db.users.filter((u) => String(u.id) !== String(targetId));
@@ -1079,6 +1109,11 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
     await saveAll({ ...db, notifications: nextNotifications });
   };
 
+  const deleteNotification = async (notifId) => {
+    const nextNotifications = db.notifications.filter((n) => String(n.id || n.notifId || "") !== String(notifId));
+    await saveAll({ ...db, notifications: nextNotifications }, "Message deleted.");
+  };
+
   const markAllNotificationsRead = async () => {
     const clientId = currentUser.id;
     const nextNotifications = db.notifications.map((n) =>
@@ -1156,7 +1191,7 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
       setNotice("This appointment can no longer be cancelled.");
       return;
     }
-    const confirmed = window.confirm("Cancel this appointment request?");
+    const confirmed = await openConfirm("Cancel Appointment", "Cancel this appointment request? This cannot be undone.");
     if (!confirmed) return;
     const nextAppointments = db.appointments.filter((a) => getApptId(a) !== String(apptId));
     await saveAll({ ...db, appointments: nextAppointments }, "Appointment cancelled.");
@@ -1220,12 +1255,12 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
     : [];
   const adminUnread = adminNotifs.filter((n) => !n.isRead && !n.read).length;
   const navItems = role === "admin"
-    ? [{ id: "users", label: "User Management" }, { id: "reports", label: "Reports" }, { id: "inbox", label: adminUnread > 0 ? `Inbox (${adminUnread})` : "Inbox" }]
+    ? [{ id: "profile", label: "Profile" }, { id: "users", label: "User Management" }, { id: "reports", label: "Reports" }, { id: "inbox", label: adminUnread > 0 ? `Inbox (${adminUnread})` : "Inbox" }]
     : role === "lawyer"
       ? [{ id: "cases", label: "Cases" }, { id: "schedule", label: "Schedule" }, { id: "documents", label: "Documents" }]
       : role === "assistant"
         ? [{ id: "requests", label: "Client Requests" }, { id: "handling", label: "Appointments" }, { id: "cases", label: "Cases" }, { id: "documents", label: "Documents" }, { id: "schedule", label: "Lawyer Schedule" }]
-        : [{ id: "overview", label: "Overview" }, { id: "cases", label: "Case Status" }, { id: "documents", label: "Documents" }, { id: "inbox", label: clientUnreadCount > 0 ? `Inbox (${clientUnreadCount})` : "Inbox" }];
+        : [{ id: "appointment", label: "Appointment" }, { id: "cases", label: "Case Status" }, { id: "documents", label: "Documents" }, { id: "inbox", label: clientUnreadCount > 0 ? `Inbox (${clientUnreadCount})` : "Inbox" }, { id: "profile", label: "Profile" }];
 
   return (
     <div className={`flex min-h-screen bg-gradient-to-br ${theme.shell}`}>
@@ -1287,9 +1322,9 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
       {/* Main content */}
       <main className="flex-1 overflow-y-auto pb-20 pt-16 lg:pb-6 lg:pt-0">
         <div className="mx-auto max-w-5xl space-y-6 p-6">
-          <section className={`grid gap-4 ${role === "admin" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          <section className={`grid gap-4 ${role === "admin" ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}>
             <MetricCard label="Signed In As" value={name} />
-            <MetricCard label="Role" value={roleLabel} />
+            {role !== "client" && <MetricCard label="Role" value={roleLabel} />}
             {role === "admin" && <MetricCard label="Platform Users" value={String(db.users.length || 0)} />}
           </section>
 
@@ -1300,34 +1335,81 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
               <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
                 <h2 className="font-serif text-4xl text-slate-900">Admin Control Center</h2>
 
+                {/* Profile Tab */}
+                {sidebarPage === "profile" && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-slate-900">My Profile</h3>
+                    <form onSubmit={saveUserProfile} className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold text-slate-600">Full Name</label>
+                        <input name="name" key={currentUser?.name} defaultValue={currentUser?.name || ""} required className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold text-slate-600">Email</label>
+                        <input name="email" type="email" key={currentUser?.email} defaultValue={currentUser?.email || ""} required className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold text-slate-600">Phone</label>
+                        <input name="phone" key={currentUser?.phone} defaultValue={currentUser?.phone || ""} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold text-slate-600">Occupation / Department</label>
+                        <input name="department" key={currentUser?.department} defaultValue={currentUser?.department || ""} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                      </div>
+                      <div className="col-span-full">
+                        <button type="submit" className={`rounded-xl px-5 py-2.5 text-sm font-semibold text-white ${theme.accent}`}>Save Changes</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
                 {/* Users Tab */}
                 {sidebarPage === "users" && (
                   <div className="space-y-3">
-                    <p className="text-sm text-slate-600">Edit, disable/enable, and delete non-admin users.</p>
+                    <input
+                      type="text"
+                      placeholder="Search users by name or email..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                    />
                     <div className="overflow-auto rounded-xl border border-slate-200">
                       <table className="min-w-full text-left text-sm">
                         <thead className="bg-slate-50 text-slate-600">
                           <tr>
                             <th className="px-3 py-2">Name</th>
-                            <th className="px-3 py-2">Role</th>
                             <th className="px-3 py-2">Email</th>
+                            <th className="px-3 py-2">Role</th>
                             <th className="px-3 py-2">Status</th>
-                            <th className="px-3 py-2">Action</th>
+                            <th className="px-3 py-2">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {db.users.map((u) => (
+                          {db.users
+                            .filter((u) => {
+                              const q = userSearch.toLowerCase().trim();
+                              return !q || (u.name || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q);
+                            })
+                            .map((u) => (
                             <tr key={u.id} className="border-t border-slate-200">
-                              <td className="px-3 py-2">{u.name}</td>
-                              <td className="px-3 py-2 capitalize">{u.role}</td>
-                              <td className="px-3 py-2">{u.email}</td>
+                              <td className="px-3 py-2 font-medium">{u.name}</td>
+                              <td className="px-3 py-2 text-slate-600">{u.email}</td>
+                              <td className="px-3 py-2">
+                                <select
+                                  value={u.role || "client"}
+                                  onChange={(e) => changeUserRole(u.id, e.target.value)}
+                                  className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                                >
+                                  <option value="admin">Admin</option>
+                                  <option value="lawyer">Lawyer</option>
+                                  <option value="assistant">Assistant</option>
+                                  <option value="client">Client</option>
+                                </select>
+                              </td>
                               <td className="px-3 py-2 capitalize">{u.status || "active"}</td>
                               <td className="px-3 py-2">
-                                {String(u.role || "").toLowerCase() === "admin" ? (
-                                  <span className="text-xs text-slate-400">Owner</span>
-                                ) : (
-                                  <div className="flex flex-wrap gap-2">
-                                    <button onClick={() => editUser(u.id)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700">Edit</button>
+                                {String(u.role || "").toLowerCase() !== "admin" && (
+                                  <div className="flex flex-wrap gap-1.5">
                                     <button onClick={() => toggleUserStatus(u.id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>
                                       {(u.status || "active") === "blocked" ? "Enable" : "Disable"}
                                     </button>
@@ -1358,9 +1440,13 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                       <div>
                         <label className="mb-1 block text-xs font-semibold text-slate-600">Date Range</label>
                         <select value={reportRange} onChange={(e) => setReportRange(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                          <option value="today">Today</option>
+                          <option value="last7">Last 7 Days</option>
+                          <option value="last15">Last 15 Days</option>
+                          <option value="last30">Last 30 Days</option>
+                          <option value="3months">Last 3 Months</option>
+                          <option value="6months">Last 6 Months</option>
                           <option value="all">All Time</option>
-                          <option value="month">This Month</option>
-                          <option value="30d">Last 30 Days</option>
                         </select>
                       </div>
                       {reportType === "details" && (
@@ -1390,7 +1476,7 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                       )}
                       {reportType === "transactions" && (
                         <div>
-                          <label className="mb-1 block text-xs font-semibold text-slate-600">TX Status</label>
+                          <label className="mb-1 block text-xs font-semibold text-slate-600">Status</label>
                           <select value={reportTxStatus} onChange={(e) => setReportTxStatus(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                             <option value="all">All</option>
                             <option>Pending</option>
@@ -1548,19 +1634,27 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                           className={`rounded-xl border px-4 py-3 ${(!n.isRead && !n.read) ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}
                         >
                           <div className="flex items-start justify-between gap-3">
-                            <div>
+                            <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-slate-800">{n.title}</p>
                               <p className="mt-0.5 text-xs text-slate-600">{n.message}</p>
                               <p className="mt-1 text-xs text-slate-400">{n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString() : "")}</p>
                             </div>
-                            {(!n.isRead && !n.read) && (
+                            <div className="flex shrink-0 gap-2">
+                              {(!n.isRead && !n.read) && (
+                                <button
+                                  onClick={() => markNotificationRead(n.id || n.notifId)}
+                                  className="rounded-lg border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700"
+                                >
+                                  Mark read
+                                </button>
+                              )}
                               <button
-                                onClick={() => markNotificationRead(n.id || n.notifId)}
-                                className="shrink-0 rounded-lg border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700"
+                                onClick={() => deleteNotification(n.id || n.notifId)}
+                                className="rounded-lg border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700"
                               >
-                                Mark read
+                                Delete
                               </button>
-                            )}
+                            </div>
                           </div>
                         </div>
                       ))
@@ -1891,7 +1985,7 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                 </div>
               </div>
 
-              {sidebarPage === "overview" && (
+              {sidebarPage === "appointment" && (
                 <div className="space-y-5">
                   <div>
                     <p className="mb-3 text-sm font-semibold text-slate-700">Request New Appointment</p>
@@ -2102,24 +2196,83 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                               {n.createdAt ? new Date(n.createdAt).toLocaleString() : n.date || ""}
                             </p>
                           </div>
-                          {isUnread && (
+                          <div className="flex shrink-0 gap-2">
+                            {isUnread && (
+                              <button
+                                onClick={() => markNotificationRead(n.id)}
+                                className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:border-slate-400"
+                              >
+                                Mark read
+                              </button>
+                            )}
                             <button
-                              onClick={() => markNotificationRead(n.id)}
-                              className="flex-shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:border-slate-400"
+                              onClick={() => deleteNotification(n.id)}
+                              className="rounded border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700"
                             >
-                              Mark read
+                              Delete
                             </button>
-                          )}
+                          </div>
                         </div>
                       </div>
                     );
                   }) : <p className="text-sm text-slate-500">Your inbox is empty.</p>}
                 </div>
               )}
+
+              {sidebarPage === "profile" && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-900">My Profile</h3>
+                  <form onSubmit={saveUserProfile} className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-600">Full Name</label>
+                      <input name="name" key={currentUser?.name} defaultValue={currentUser?.name || ""} required className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-600">Email</label>
+                      <input name="email" type="email" key={currentUser?.email} defaultValue={currentUser?.email || ""} required className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-600">Phone</label>
+                      <input name="phone" key={currentUser?.phone} defaultValue={currentUser?.phone || ""} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-600">Occupation</label>
+                      <input name="department" key={currentUser?.department} defaultValue={currentUser?.department || ""} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                    </div>
+                    <div className="col-span-full">
+                      <button type="submit" className={`rounded-xl px-5 py-2.5 text-sm font-semibold text-white ${theme.accent}`}>Save Changes</button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </section>
           )}
         </div>
       </main>
+
+      {/* Custom confirm dialog */}
+      {confirmDlg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <h3 className="text-base font-semibold text-slate-900">{confirmDlg.title}</h3>
+            <p className="mt-2 text-sm text-slate-600">{confirmDlg.message}</p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                onClick={() => { confirmDlg.resolve(false); setConfirmDlg(null); }}
+                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { confirmDlg.resolve(true); setConfirmDlg(null); }}
+                className="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

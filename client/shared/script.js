@@ -5,10 +5,10 @@ const LAWYER_ID_KEY = "lawyer_id";
 const LAWYER_NAME_KEY = "lawyer_name";
 
 const modules = [
+  { id: "appointmentSection", title: "Appointment", text: "Schedule a consultation with our legal team." },
   { id: "profileSection", title: "Profile", text: "View and manage user profile information." },
-  { id: "appointmentSection", title: "Book Appointment", text: "Schedule a consultation with our legal team." },
   { id: "clientCaseSection", title: "Case Status", text: "Track your active cases and manage documents." },
-  { id: "userManagementSection", title: "User Management", text: "Assign roles, update permissions, and manage all users." },
+  { id: "userManagementSection", title: "User Management", text: "Manage all users and assign roles across the system." },
   { id: "reportSection", title: "Report Generation", text: "Generate detailed system, transaction, and activity summaries." },
   { id: "notificationSection", title: "Inbox", text: "Messages and alerts regarding your cases." }
 ];
@@ -82,7 +82,8 @@ const elements = {
   confirmModalTitle: document.getElementById("confirmModalTitle"),
   confirmModalMessage: document.getElementById("confirmModalMessage"),
   confirmModalCancel: document.getElementById("confirmModalCancel"),
-  confirmModalApprove: document.getElementById("confirmModalApprove")
+  confirmModalApprove: document.getElementById("confirmModalApprove"),
+  userSearchInput: document.getElementById("userSearchInput")
 };
 
 function seedDemoData() {
@@ -184,7 +185,7 @@ window.showConfirmDialog = function ({
   cancelText = "Cancel"
 } = {}) {
   if (!elements.confirmModal) {
-    return Promise.resolve(window.confirm(message));
+    return Promise.resolve(false);
   }
 
   if (appState.confirmDialog) {
@@ -424,7 +425,6 @@ function renderProfileForm() {
   }
 
   const initials = user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-  const ro = user.role === "client" ? "readonly" : "";
 
   elements.profileForm.innerHTML = `
     <div class="profile-redesign-container">
@@ -440,13 +440,13 @@ function renderProfileForm() {
       </div>
       <div class="profile-details-side">
         <div class="form-grid">
-          <label><span>Full Name</span><input type="text" name="name" value="${user.name}" ${ro}></label>
-          <label><span>Email Address</span><input type="email" name="email" value="${user.email}" ${ro}></label>
-          <label><span>Phone Number</span><input type="text" name="phone" value="${user.phone}" ${ro}></label>
-          <label><span>Official Occupation</span><input type="text" name="department" value="${user.department}" ${ro}></label>
+          <label><span>Full Name</span><input type="text" name="name" value="${user.name}"></label>
+          <label><span>Email Address</span><input type="email" name="email" value="${user.email}"></label>
+          <label><span>Phone Number</span><input type="text" name="phone" value="${user.phone}"></label>
+          <label><span>Official Occupation</span><input type="text" name="department" value="${user.department}"></label>
         </div>
         <div class="profile-actions-row">
-          ${user.role === "client" ? "" : '<button class="primary-btn prof-btn-update" type="submit">Save Changes</button>'}
+          <button class="primary-btn prof-btn-update" type="submit">Save Changes</button>
           <button class="table-btn danger-action prof-btn-delete" id="deleteProfileBtn" type="button">Delete Account</button>
         </div>
       </div>
@@ -474,7 +474,7 @@ function renderNotifications() {
 function renderUserManagementForm() {
   const user = getCurrentUser();
   if (!user || user.role !== "admin") return;
-  const selectables = appState.data.users.filter(u => u.role !== "admin" && u.status !== "blocked");
+  const selectables = appState.data.users.filter(u => u.id !== user.id);
   elements.userManagementForm.innerHTML = `
     <div class="um-flow">
       <div class="um-step">
@@ -492,6 +492,7 @@ function renderUserManagementForm() {
         <span class="um-step-label"><span class="um-step-num">2</span> Assign Role</span>
         <select name="role" required>
           <option value="">Select new role...</option>
+          <option value="admin">Admin</option>
           <option value="client">Client</option>
           <option value="lawyer">Lawyer</option>
           <option value="assistant">Assistant</option>
@@ -519,11 +520,39 @@ function renderUserTable() {
     </tr>`).join("");
 }
 
+const reportRangeLabels = {
+  today: "Today",
+  last7: "Last 7 Days",
+  last15: "Last 15 Days",
+  last30: "Last 30 Days",
+  "3months": "Last 3 Months",
+  "6months": "Last 6 Months",
+  weekly: "Last 7 Days",
+  monthly: "Last 30 Days",
+  yearly: "Current Year"
+};
+
+function getRangeCutoff(range) {
+  const now = new Date();
+  const days = { today: 0, last7: 7, last15: 15, last30: 30, "3months": 90, "6months": 180, weekly: 7, monthly: 30, yearly: 365 };
+  if (range === "today") {
+    now.setHours(0, 0, 0, 0);
+    return now;
+  }
+  const d = days[range] || 30;
+  now.setDate(now.getDate() - d);
+  return now;
+}
+
 function generateDetailsReport() {
   const range = elements.reportRangeSelect.value;
+  const rangeLabel = reportRangeLabels[range] || range;
+  const cutoff = getRangeCutoff(range);
   const users = appState.data.users;
-  const cases = appState.data.cases || [];
-  const appointments = appState.data.appointments || [];
+  const allCases = appState.data.cases || [];
+  const allAppointments = appState.data.appointments || [];
+  const cases = allCases.filter(c => !c.date || new Date(c.date) >= cutoff);
+  const appointments = allAppointments.filter(a => !a.date || new Date(a.date) >= cutoff);
 
   const activeCount = users.filter(u => u.status !== "blocked").length;
   const blockedCount = users.length - activeCount;
@@ -540,7 +569,7 @@ function generateDetailsReport() {
   const confirmedAppts = appointments.filter(a => a.status === "Confirmed").length;
   const pendingAppts = appointments.filter(a => a.status === "Pending").length;
 
-  elements.reportTitle.textContent = `Details Report — ${titleCase(range)}`;
+  elements.reportTitle.textContent = `Details Report — ${rangeLabel}`;
   elements.reportOutputBox.classList.remove("hidden");
   elements.reportOutputText.innerHTML = `
     <div class="report-block">
@@ -573,12 +602,14 @@ function generateDetailsReport() {
 
 function generateTransactionReport() {
   const range = elements.reportRangeSelect.value;
-  const txs = appState.data.transactions || [];
+  const rangeLabel = reportRangeLabels[range] || range;
+  const cutoff = getRangeCutoff(range);
+  const txs = (appState.data.transactions || []).filter(tx => !tx.date || new Date(tx.date) >= cutoff);
 
   const totalRevenue = txs.reduce((sum, tx) => tx.status === "Confirmed" ? sum + tx.amount : sum, 0);
   const pendingRev = txs.reduce((sum, tx) => tx.status === "Pending" ? sum + tx.amount : sum, 0);
 
-  elements.reportTitle.textContent = `Transaction Report - ${titleCase(range)}`;
+  elements.reportTitle.textContent = `Transaction Report — ${rangeLabel}`;
   elements.reportOutputBox.classList.remove("hidden");
 
   let tableRows = txs.map(tx => `
@@ -748,17 +779,23 @@ function bindEvents() {
   if (elements.profileForm) {
     elements.profileForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      const u = getCurrentUser(); if (!u || u.role === "client") return;
+      const u = getCurrentUser(); if (!u) return;
       const fd = new FormData(e.currentTarget);
       u.name = fd.get("name"); u.email = fd.get("email"); u.phone = fd.get("phone"); u.department = fd.get("department");
       saveData(); renderAll(); showToast("Profile updated.");
     });
 
-    elements.profileForm.addEventListener("click", (e) => {
+    elements.profileForm.addEventListener("click", async (e) => {
       const delBtn = e.target.closest("#deleteProfileBtn");
       if (delBtn) {
-        if (!confirm("Are you sure you want to permanently delete your account? This action cannot be undone.")) return;
-        const u = getCurrentUser(); if (!u || u.role === "client") return;
+        const confirmed = await window.showConfirmDialog({
+          title: "Delete Account?",
+          message: "Are you sure you want to permanently delete your account? This action cannot be undone.",
+          confirmText: "Delete Account",
+          cancelText: "Keep Account"
+        });
+        if (!confirmed) return;
+        const u = getCurrentUser(); if (!u) return;
         appState.data.users = appState.data.users.filter(i => i.id !== u.id);
         appState.currentUserId = null; saveData(); saveSession(); renderAll(); showToast("Account deleted.");
       }
@@ -899,6 +936,19 @@ function bindEvents() {
   }
   if (elements.genTransReportBtn) {
     elements.genTransReportBtn.addEventListener("click", generateTransactionReport);
+  }
+
+  if (elements.userSearchInput) {
+    elements.userSearchInput.addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      if (elements.userTableBody) {
+        elements.userTableBody.querySelectorAll("tr").forEach(row => {
+          const name = row.cells[1]?.textContent.toLowerCase() || "";
+          const email = row.cells[2]?.textContent.toLowerCase() || "";
+          row.style.display = !q || name.includes(q) || email.includes(q) ? "" : "none";
+        });
+      }
+    });
   }
 }
 

@@ -319,7 +319,6 @@ function TeamPage({ lawyersList, assistantsList }) {
             transition={{ duration: 0.35, delay: index * 0.04 }}
             className="overflow-hidden rounded-2xl border border-slate-300 bg-white"
           >
-            <img src={person.image_url} alt={person.name} className="h-64 w-full object-cover" />
             <div className="p-4">
               <p className="text-lg font-semibold text-slate-900">{person.name}</p>
               <p className="text-sm text-slate-600">{person.level}</p>
@@ -592,6 +591,13 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
   const [scheduleForm, setScheduleForm] = useState({ lawyerId: "", title: "", date: "", time: "", type: "Meeting" });
   const [docForm, setDocForm] = useState({ caseId: "", title: "", category: "Evidence", file: null });
   const docFileRef = useRef(null);
+  const [adminTab, setAdminTab] = useState("users");
+  const [reportType, setReportType] = useState("details");
+  const [reportRange, setReportRange] = useState("all");
+  const [reportRoleFilter, setReportRoleFilter] = useState("all");
+  const [reportStatusFilter, setReportStatusFilter] = useState("all");
+  const [reportTxStatus, setReportTxStatus] = useState("all");
+  const [reportOutput, setReportOutput] = useState(null);
   const [assistantPage, setAssistantPage] = useState("requests");
   const [assistantSearch, setAssistantSearch] = useState("");
   const [selectedAssistantCaseId, setSelectedAssistantCaseId] = useState("");
@@ -651,6 +657,64 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
     if (message) setNotice(message);
   };
 
+  const makeAdminNotif = (title, message, currentDb) => {
+    const source = currentDb || db;
+    const adminUser = source.users.find((u) => String(u.role || "").toLowerCase() === "admin");
+    if (!adminUser) return null;
+    return {
+      id: `N-${Date.now()}`,
+      userId: adminUser.id,
+      title,
+      message,
+      date: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
+      isRead: false,
+      read: false
+    };
+  };
+
+  const generateReport = () => {
+    const now = new Date();
+    const inRange = (dateStr) => {
+      if (reportRange === "all") return true;
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      if (isNaN(d)) return false;
+      if (reportRange === "month") return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      if (reportRange === "30d") { const cut = new Date(now); cut.setDate(cut.getDate() - 30); return d >= cut; }
+      return true;
+    };
+
+    if (reportType === "details") {
+      const filteredUsers = db.users.filter((u) => reportRoleFilter === "all" || String(u.role || "") === reportRoleFilter);
+      const filteredCases = db.cases.filter((c) => {
+        const statusOk = reportStatusFilter === "all" || String(c.status || "") === reportStatusFilter;
+        const rangeOk = inRange(c.createdAt || c.lastUpdated || c.hearingDate);
+        return statusOk && rangeOk;
+      });
+      const filteredAppts = db.appointments.filter((a) => inRange(a.date || a.createdAt));
+
+      const usersByRole = {};
+      filteredUsers.forEach((u) => { const r = u.role || "unknown"; usersByRole[r] = (usersByRole[r] || 0) + 1; });
+      const casesByStatus = {};
+      filteredCases.forEach((c) => { const s = c.status || "Unknown"; casesByStatus[s] = (casesByStatus[s] || 0) + 1; });
+      const apptsByStatus = {};
+      filteredAppts.forEach((a) => { const s = a.status || "Unknown"; apptsByStatus[s] = (apptsByStatus[s] || 0) + 1; });
+
+      setReportOutput({ type: "details", usersByRole, casesByStatus, apptsByStatus, users: filteredUsers, cases: filteredCases, appointments: filteredAppts });
+    } else {
+      const filteredTx = db.transactions.filter((t) => {
+        const statusOk = reportTxStatus === "all" || String(t.status || "") === reportTxStatus;
+        const rangeOk = inRange(t.txDate || t.tx_date || t.date || t.createdAt);
+        return statusOk && rangeOk;
+      });
+      const totalAmount = filteredTx.reduce((acc, t) => acc + Number(t.amount || 0), 0);
+      const byStatus = {};
+      filteredTx.forEach((t) => { const s = t.status || "Unknown"; byStatus[s] = { count: (byStatus[s]?.count || 0) + 1, amount: (byStatus[s]?.amount || 0) + Number(t.amount || 0) }; });
+      setReportOutput({ type: "transactions", transactions: filteredTx, totalAmount, byStatus });
+    }
+  };
+
   const getCaseId = (item) => String(item?.caseId || item?.id || "");
   const getDocId = (item) => String(item?.docId || item?.id || "");
   const getApptId = (item) => String(item?.id || item?.appointmentId || "");
@@ -658,16 +722,15 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
 
   const updateCaseStatus = async (caseId, status) => {
     if (!["lawyer", "assistant"].includes(role)) return;
+    const caseItem = db.cases.find((item) => String(item.caseId || item.id) === String(caseId));
     const nextCases = db.cases.map((item) =>
       String(item.caseId || item.id) === String(caseId)
-        ? {
-            ...item,
-            status,
-            lastUpdated: new Date().toISOString()
-          }
+        ? { ...item, status, lastUpdated: new Date().toISOString() }
         : item
     );
-    await saveAll({ ...db, cases: nextCases }, "Case status updated.");
+    const adminNotif = makeAdminNotif("Case Status Updated", `Case "${caseItem?.title || caseId}" status changed to "${status}" by ${name}.`);
+    const nextNotifications = adminNotif ? [adminNotif, ...db.notifications] : db.notifications;
+    await saveAll({ ...db, cases: nextCases, notifications: nextNotifications }, "Case status updated.");
   };
 
   const normalizeCategory = (value) => String(value || "").toLowerCase().replace(/[^a-z]/g, "");
@@ -787,7 +850,9 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
       },
       ...db.cases
     ];
-    await saveAll({ ...db, appointments: nextAppointments, cases: nextCases }, "Assistant accepted request and created case.");
+    const adminNotif = makeAdminNotif("New Case Created", `Assistant ${name} created case "${title || "Untitled"}" from appointment intake.`);
+    const nextNotifications = adminNotif ? [adminNotif, ...db.notifications] : db.notifications;
+    await saveAll({ ...db, appointments: nextAppointments, cases: nextCases, notifications: nextNotifications }, "Assistant accepted request and created case.");
   };
 
   const selectRequestForHandling = async (appointmentId) => {
@@ -803,12 +868,15 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
 
   const confirmAppointmentByAssistant = async (appointmentId) => {
     if (role !== "assistant") return;
+    const appt = db.appointments.find((a) => getApptId(a) === String(appointmentId));
     const nextAppointments = db.appointments.map((a) =>
       getApptId(a) === String(appointmentId)
         ? { ...a, status: "Confirmed", payment: a.payment || "Pending" }
         : a
     );
-    await saveAll({ ...db, appointments: nextAppointments }, "Appointment confirmed for client.");
+    const adminNotif = makeAdminNotif("Appointment Confirmed", `Assistant ${name} confirmed an appointment (${appt?.type || appt?.caseType || "General"}) on ${appt?.date || appt?.apptDate || "—"}.`);
+    const nextNotifications = adminNotif ? [adminNotif, ...db.notifications] : db.notifications;
+    await saveAll({ ...db, appointments: nextAppointments, notifications: nextNotifications }, "Appointment confirmed for client.");
   };
 
   const communicateWithClient = async (appointmentId) => {
@@ -866,7 +934,9 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
         ? { ...c, status: nextStatus || c.status, progressNote: note || c.progressNote, lastUpdated: new Date().toISOString() }
         : c
     );
-    await saveAll({ ...db, cases: nextCases }, "Lawyer progress updated.");
+    const adminNotif = makeAdminNotif("Case Progress Updated", `Lawyer ${name} updated case "${caseItem?.title || caseId}": ${note || nextStatus}.`);
+    const nextNotifications = adminNotif ? [adminNotif, ...db.notifications] : db.notifications;
+    await saveAll({ ...db, cases: nextCases, notifications: nextNotifications }, "Lawyer progress updated.");
   };
 
   const createSchedule = async (e) => {
@@ -1067,9 +1137,11 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
       createdAt: new Date().toISOString(),
       isRead: false
     };
+    const adminNotif = makeAdminNotif("New Appointment Request", `Client ${currentUser.name || "Client"} booked a ${apptForm.type} appointment for ${apptForm.date}.`);
+    const nextNotifications = [newNotification, ...(adminNotif ? [adminNotif] : []), ...db.notifications];
 
     await saveAll(
-      { ...db, appointments: [newAppointment, ...db.appointments], notifications: [newNotification, ...db.notifications] },
+      { ...db, appointments: [newAppointment, ...db.appointments], notifications: nextNotifications },
       `Request sent to ${routeToName} for approval.`
     );
     setApptForm({ type: CASE_CATEGORIES[0], date: "", time: "", lawyerId: "" });
@@ -1163,60 +1235,314 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
           </div>
         </header>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className={`grid gap-4 ${role === "admin" ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
           <MetricCard label="Signed In As" value={name} />
           <MetricCard label="Role" value={roleLabel} />
           <MetricCard label={`Total ${roleLabel}s`} value={String(roleUsers || 1)} />
-          <MetricCard label="Platform Users" value={String(db.users.length || 0)} />
+          {role === "admin" && <MetricCard label="Platform Users" value={String(db.users.length || 0)} />}
         </section>
 
         {notice ? <p className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700">{notice}</p> : null}
         {loading ? <p className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600">Loading workspace data...</p> : null}
 
-        {role === "admin" ? (
-          <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
-            <h2 className="font-serif text-4xl text-slate-900">User Management</h2>
-            <p className="mt-2 text-sm text-slate-600">Admin can edit, disable/enable, and delete non-admin users.</p>
-            <div className="overflow-auto rounded-xl border border-slate-200">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 text-slate-600">
-                  <tr>
-                    <th className="px-3 py-2">Name</th>
-                    <th className="px-3 py-2">Role</th>
-                    <th className="px-3 py-2">Email</th>
-                    <th className="px-3 py-2">Status</th>
-                    <th className="px-3 py-2">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {db.users.map((u) => (
-                    <tr key={u.id} className="border-t border-slate-200">
-                      <td className="px-3 py-2">{u.name}</td>
-                      <td className="px-3 py-2 capitalize">{u.role}</td>
-                      <td className="px-3 py-2">{u.email}</td>
-                      <td className="px-3 py-2 capitalize">{u.status || "active"}</td>
-                      <td className="px-3 py-2">
-                        {String(u.role || "").toLowerCase() === "admin" ? (
-                          <span className="text-xs text-slate-400">Owner</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            <button onClick={() => editUser(u.id)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700">Edit</button>
-                            <button onClick={() => toggleUserStatus(u.id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>
-                              {(u.status || "active") === "blocked" ? "Enable" : "Disable"}
-                            </button>
-                            <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700">
-                              Delete
-                            </button>
+        {role === "admin" ? (() => {
+          const adminUser = db.users.find((u) => String(u.id) === String(currentUser.id));
+          const adminNotifs = db.notifications
+            .filter((n) => String(n.userId || "") === String(currentUser.id || ""))
+            .sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0));
+          const adminUnread = adminNotifs.filter((n) => !n.isRead && !n.read).length;
+
+          return (
+            <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
+              <h2 className="font-serif text-4xl text-slate-900">Admin Control Center</h2>
+
+              {/* Tab Bar */}
+              <div className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                {[
+                  { id: "users", label: "Users" },
+                  { id: "reports", label: "Reports" },
+                  { id: "inbox", label: adminUnread > 0 ? `Inbox (${adminUnread})` : "Inbox" }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setAdminTab(tab.id)}
+                    className={`flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition ${adminTab === tab.id ? "bg-white text-indigo-700 shadow" : "text-slate-500 hover:text-slate-700"}`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Users Tab */}
+              {adminTab === "users" && (
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-600">Edit, disable/enable, and delete non-admin users.</p>
+                  <div className="overflow-auto rounded-xl border border-slate-200">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-slate-50 text-slate-600">
+                        <tr>
+                          <th className="px-3 py-2">Name</th>
+                          <th className="px-3 py-2">Role</th>
+                          <th className="px-3 py-2">Email</th>
+                          <th className="px-3 py-2">Status</th>
+                          <th className="px-3 py-2">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {db.users.map((u) => (
+                          <tr key={u.id} className="border-t border-slate-200">
+                            <td className="px-3 py-2">{u.name}</td>
+                            <td className="px-3 py-2 capitalize">{u.role}</td>
+                            <td className="px-3 py-2">{u.email}</td>
+                            <td className="px-3 py-2 capitalize">{u.status || "active"}</td>
+                            <td className="px-3 py-2">
+                              {String(u.role || "").toLowerCase() === "admin" ? (
+                                <span className="text-xs text-slate-400">Owner</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-2">
+                                  <button onClick={() => editUser(u.id)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700">Edit</button>
+                                  <button onClick={() => toggleUserStatus(u.id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>
+                                    {(u.status || "active") === "blocked" ? "Enable" : "Disable"}
+                                  </button>
+                                  <button onClick={() => deleteUser(u.id)} className="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700">Delete</button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Reports Tab */}
+              {adminTab === "reports" && (
+                <div className="space-y-4">
+                  {/* Report controls */}
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-600">Report Type</label>
+                      <select value={reportType} onChange={(e) => { setReportType(e.target.value); setReportOutput(null); }} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                        <option value="details">User &amp; Case Activity</option>
+                        <option value="transactions">Transaction Report</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold text-slate-600">Date Range</label>
+                      <select value={reportRange} onChange={(e) => setReportRange(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                        <option value="all">All Time</option>
+                        <option value="month">This Month</option>
+                        <option value="30d">Last 30 Days</option>
+                      </select>
+                    </div>
+                    {reportType === "details" && (
+                      <>
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-slate-600">Role Filter</label>
+                          <select value={reportRoleFilter} onChange={(e) => setReportRoleFilter(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                            <option value="all">All Roles</option>
+                            <option value="client">Client</option>
+                            <option value="lawyer">Lawyer</option>
+                            <option value="assistant">Assistant</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-slate-600">Case Status</label>
+                          <select value={reportStatusFilter} onChange={(e) => setReportStatusFilter(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                            <option value="all">All Statuses</option>
+                            <option>Open</option>
+                            <option>In Progress</option>
+                            <option>Pending</option>
+                            <option>Pending Lawyer Review</option>
+                            <option>Closed</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+                    {reportType === "transactions" && (
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold text-slate-600">TX Status</label>
+                        <select value={reportTxStatus} onChange={(e) => setReportTxStatus(e.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                          <option value="all">All</option>
+                          <option>Pending</option>
+                          <option>Completed</option>
+                          <option>Failed</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={generateReport} className={`rounded-xl px-5 py-2.5 text-sm font-semibold text-white ${theme.accent}`}>
+                    Generate Report
+                  </button>
+
+                  {/* Report Output */}
+                  {reportOutput && reportOutput.type === "details" && (
+                    <div className="space-y-4">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Users Matched</p>
+                          <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.users.length}</p>
+                          <div className="mt-2 space-y-1">
+                            {Object.entries(reportOutput.usersByRole).map(([r, c]) => (
+                              <p key={r} className="text-xs text-slate-600 capitalize">{r}: {c}</p>
+                            ))}
                           </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ) : null}
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Cases Matched</p>
+                          <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.cases.length}</p>
+                          <div className="mt-2 space-y-1">
+                            {Object.entries(reportOutput.casesByStatus).map(([s, c]) => (
+                              <p key={s} className="text-xs text-slate-600">{s}: {c}</p>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Appointments</p>
+                          <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.appointments.length}</p>
+                          <div className="mt-2 space-y-1">
+                            {Object.entries(reportOutput.apptsByStatus).map(([s, c]) => (
+                              <p key={s} className="text-xs text-slate-600">{s}: {c}</p>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="overflow-auto rounded-xl border border-slate-200">
+                        <table className="min-w-full text-left text-xs">
+                          <thead className="bg-slate-50 text-slate-500">
+                            <tr>
+                              <th className="px-3 py-2">Name</th>
+                              <th className="px-3 py-2">Role</th>
+                              <th className="px-3 py-2">Email</th>
+                              <th className="px-3 py-2">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reportOutput.users.map((u) => (
+                              <tr key={u.id} className="border-t border-slate-200">
+                                <td className="px-3 py-2">{u.name}</td>
+                                <td className="px-3 py-2 capitalize">{u.role}</td>
+                                <td className="px-3 py-2">{u.email}</td>
+                                <td className="px-3 py-2 capitalize">{u.status || "active"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      {reportOutput.cases.length > 0 && (
+                        <div className="overflow-auto rounded-xl border border-slate-200">
+                          <table className="min-w-full text-left text-xs">
+                            <thead className="bg-slate-50 text-slate-500">
+                              <tr>
+                                <th className="px-3 py-2">Case Title</th>
+                                <th className="px-3 py-2">Type</th>
+                                <th className="px-3 py-2">Status</th>
+                                <th className="px-3 py-2">Priority</th>
+                                <th className="px-3 py-2">Hearing Date</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {reportOutput.cases.map((c) => (
+                                <tr key={getCaseId(c)} className="border-t border-slate-200">
+                                  <td className="px-3 py-2">{c.title || "Untitled"}</td>
+                                  <td className="px-3 py-2">{c.caseType || c.type || "—"}</td>
+                                  <td className="px-3 py-2">{c.status}</td>
+                                  <td className="px-3 py-2">{c.priority || "—"}</td>
+                                  <td className="px-3 py-2">{c.hearingDate || "—"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {reportOutput && reportOutput.type === "transactions" && (
+                    <div className="space-y-4">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Transactions</p>
+                          <p className="mt-1 text-3xl font-bold text-slate-900">{reportOutput.transactions.length}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Amount</p>
+                          <p className="mt-1 text-3xl font-bold text-slate-900">৳{reportOutput.totalAmount.toLocaleString()}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">By Status</p>
+                          <div className="mt-2 space-y-1">
+                            {Object.entries(reportOutput.byStatus).map(([s, v]) => (
+                              <p key={s} className="text-xs text-slate-600">{s}: {v.count} (৳{Number(v.amount).toLocaleString()})</p>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="overflow-auto rounded-xl border border-slate-200">
+                        <table className="min-w-full text-left text-xs">
+                          <thead className="bg-slate-50 text-slate-500">
+                            <tr>
+                              <th className="px-3 py-2">ID</th>
+                              <th className="px-3 py-2">Client</th>
+                              <th className="px-3 py-2">Amount</th>
+                              <th className="px-3 py-2">Status</th>
+                              <th className="px-3 py-2">Date</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reportOutput.transactions.map((t) => (
+                              <tr key={t.transactionId || t.id} className="border-t border-slate-200">
+                                <td className="px-3 py-2 font-mono">{t.transactionId || t.id}</td>
+                                <td className="px-3 py-2">{t.clientName || "—"}</td>
+                                <td className="px-3 py-2">৳{Number(t.amount || 0).toLocaleString()}</td>
+                                <td className="px-3 py-2">{t.status}</td>
+                                <td className="px-3 py-2">{t.txDate || t.tx_date || t.date || "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Inbox Tab */}
+              {adminTab === "inbox" && (
+                <div className="space-y-3">
+                  {adminNotifs.length === 0 ? (
+                    <p className="text-sm text-slate-500">No notifications yet.</p>
+                  ) : (
+                    adminNotifs.map((n) => (
+                      <div
+                        key={n.id || n.notifId}
+                        className={`rounded-xl border px-4 py-3 ${(!n.isRead && !n.read) ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">{n.title}</p>
+                            <p className="mt-0.5 text-xs text-slate-600">{n.message}</p>
+                            <p className="mt-1 text-xs text-slate-400">{n.date || (n.createdAt ? new Date(n.createdAt).toLocaleDateString() : "")}</p>
+                          </div>
+                          {(!n.isRead && !n.read) && (
+                            <button
+                              onClick={() => markNotificationRead(n.id || n.notifId)}
+                              className="shrink-0 rounded-lg border border-indigo-300 px-2 py-1 text-xs font-semibold text-indigo-700"
+                            >
+                              Mark read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        })() : null}
 
         {role === "lawyer" ? (
           <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
@@ -1300,7 +1626,6 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
           <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-serif text-4xl text-slate-900">Assistant Dashboard</h2>
-              <button onClick={onLogout} className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Logout</button>
             </div>
 
             <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -1529,11 +1854,24 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
           <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-serif text-4xl text-slate-900">Client Portal</h2>
-              {clientUnreadCount > 0 && (
-                <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-bold text-white">
-                  {clientUnreadCount} unread {clientUnreadCount === 1 ? "message" : "messages"}
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {clientUnreadCount > 0 && (
+                  <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-bold text-white">
+                    {clientUnreadCount} unread {clientUnreadCount === 1 ? "message" : "messages"}
+                  </span>
+                )}
+                <a
+                  href="https://t.me/SASF_lawfirm_bot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Chat on Telegram"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#229ED9] text-white shadow transition hover:bg-[#1a8bbf]"
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+                    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                  </svg>
+                </a>
+              </div>
             </div>
 
             <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1">
@@ -1904,14 +2242,17 @@ function AuthExperience({ onBack, onLoginSuccess, availableLawyers = [] }) {
       });
 
       state.notifications = Array.isArray(state.notifications) ? state.notifications : [];
-      state.notifications.unshift({
-        notifId: `N-${Date.now()}`,
-        userId: "u-admin",
-        title: "New Registration",
-        message: `${name} registered as ${role}.`,
-        createdAt: new Date().toISOString(),
-        isRead: false
-      });
+      const adminUser = state.users.find((u) => String(u.role || "").toLowerCase() === "admin");
+      if (adminUser) {
+        state.notifications.unshift({
+          id: `N-${Date.now()}`,
+          userId: adminUser.id,
+          title: "New Registration",
+          message: `${name} registered as ${role}.`,
+          createdAt: new Date().toISOString(),
+          isRead: false
+        });
+      }
 
       await apiRequest("/api/save", { method: "POST", body: state });
       setMode("login");

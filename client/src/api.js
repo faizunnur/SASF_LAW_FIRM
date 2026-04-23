@@ -1,5 +1,9 @@
+const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
 export async function apiRequest(path, options = {}) {
-  const response = await fetch(path, {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = API_BASE_URL ? `${API_BASE_URL}${normalizedPath}` : normalizedPath;
+  const response = await fetch(url, {
     method: options.method || "GET",
     headers: {
       "Content-Type": "application/json",

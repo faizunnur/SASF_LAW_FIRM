@@ -1,12 +1,26 @@
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const express = require("express");
+const cors = require("cors");
 const { checkDatabase, getSqlClient, setupDatabase } = require("./db");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const rootDir = path.join(__dirname, "..");
 const clientDir = path.join(rootDir, "client");
+const allowedOrigins = String(process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.length === 0) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  }
+}));
 
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

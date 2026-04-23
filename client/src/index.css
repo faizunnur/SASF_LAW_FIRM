@@ -1,0 +1,85 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  background: radial-gradient(circle at 10% -10%, #ffffff 0%, #f3f2ef 45%, #ebe9e2 100%);
+  color: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.font-serif {
+  font-family: "Cormorant Garamond", Georgia, serif;
+}
+
+.noise-overlay {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  opacity: 0.08;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.4) 0.4px, transparent 0.4px);
+  background-size: 3px 3px;
+  z-index: 1;
+}
+
+main,
+header {
+  position: relative;
+  z-index: 2;
+}
+
+.marquee-track {
+  display: flex;
+  gap: 0.75rem;
+  width: max-content;
+  animation: marquee 22s linear infinite;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.orb-1 {
+  width: 220px;
+  height: 220px;
+  background: rgba(220, 38, 38, 0.22);
+  top: -45px;
+  right: -55px;
+}
+
+.orb-2 {
+  width: 180px;
+  height: 180px;
+  background: rgba(148, 163, 184, 0.24);
+  bottom: -60px;
+  left: -30px;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}

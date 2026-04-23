@@ -114,6 +114,10 @@ function showMessage(element, message, type) {
   element.dataset.type = type;
 }
 
+function safeLower(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 function clearLawyerDashboardSession() {
   localStorage.removeItem(LAWYER_TOKEN_KEY);
   localStorage.removeItem(LAWYER_ID_KEY);
@@ -153,6 +157,49 @@ async function syncToCloud(data) {
   }
 }
 
+async function wireForgotPasswordPage() {
+  const form = document.getElementById("forgotPasswordForm");
+  const feedback = document.getElementById("authFeedback");
+
+  if (!form || !feedback) {
+    return;
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const data = await syncFromCloud();
+    const formData = new FormData(form);
+    const email = String(formData.get("email")).trim().toLowerCase();
+    const password = String(formData.get("password")).trim();
+    const confirmPassword = String(formData.get("confirmPassword")).trim();
+
+    if (!email || !password || !confirmPassword) {
+      showMessage(feedback, "All fields are required.", "error");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showMessage(feedback, "Passwords do not match.", "error");
+      return;
+    }
+
+    const user = (Array.isArray(data.users) ? data.users : []).find((item) => safeLower(item?.email) === email);
+    if (!user) {
+      showMessage(feedback, "No account found with that email.", "error");
+      return;
+    }
+
+    user.password = password;
+    await syncToCloud(data);
+    showMessage(feedback, "Password updated. You can sign in now.", "success");
+
+    window.setTimeout(() => {
+      window.location.href = "/login";
+    }, 800);
+  });
+}
+
 function wireLoginPage() {
   const form = document.getElementById("loginPageForm");
   const feedback = document.getElementById("authFeedback");
@@ -168,8 +215,8 @@ function wireLoginPage() {
     const formData = new FormData(form);
     const email = String(formData.get("email")).trim().toLowerCase();
     const password = String(formData.get("password")).trim();
-    const user = data.users.find(
-      (item) => item.email.toLowerCase() === email && item.password === password
+    const user = (Array.isArray(data.users) ? data.users : []).find(
+      (item) => safeLower(item?.email) === email && String(item?.password || "") === password
     );
 
     if (!user) {
@@ -217,7 +264,7 @@ function wireRegisterPage() {
     const formData = new FormData(form);
     const email = String(formData.get("email")).trim().toLowerCase();
 
-    if (data.users.some((item) => item.email.toLowerCase() === email)) {
+    if ((Array.isArray(data.users) ? data.users : []).some((item) => safeLower(item?.email) === email)) {
       showMessage(feedback, "This email is already registered.", "error");
       return;
     }
@@ -270,9 +317,9 @@ async function wireAssistantGate() {
       const identifier = String(formData.get("identifier")).trim().toLowerCase();
       const password = String(formData.get("password")).trim();
 
-      const user = data.users.find(u => 
-        (u.email.toLowerCase() === identifier || u.name.toLowerCase() === identifier) && 
-        u.password === password && 
+      const user = (Array.isArray(data.users) ? data.users : []).find(u => 
+        (safeLower(u?.email) === identifier || safeLower(u?.name) === identifier) && 
+        String(u?.password || "") === password && 
         u.role === "assistant"
       );
 
@@ -294,7 +341,7 @@ async function wireAssistantGate() {
       const formData = new FormData(signupForm);
       
       const email = String(formData.get("email")).trim().toLowerCase();
-      if (data.users.some(u => u.email.toLowerCase() === email)) {
+      if ((Array.isArray(data.users) ? data.users : []).some(u => safeLower(u?.email) === email)) {
         alert("Email already exists.");
         return;
       }
@@ -326,3 +373,4 @@ async function wireAssistantGate() {
 wireLoginPage();
 wireRegisterPage();
 wireAssistantGate();
+wireForgotPasswordPage();

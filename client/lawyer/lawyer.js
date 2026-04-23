@@ -1,4 +1,4 @@
-const API_BASE = "https://your-api.com";
+const API_BASE = window.location.origin;
 const DEMO_MODE_FALLBACK = true;
 const LEGACY_DATA_KEY = "lexbridge-data-v1";
 
@@ -396,6 +396,7 @@ function bindEvents() {
     });
   });
 
+  document.addEventListener("click", (e) => {
     if (!ui.notifArea.contains(e.target)) {
       ui.notifDropdown.classList.add("hidden");
     }
@@ -763,8 +764,12 @@ async function deleteProfile() {
 }
 
 function normalizeCase(c) {
+  const caseId = c.caseId || c.id || c.caseID || "";
+  const lastUpdated = c.lastUpdated || c.updatedOn || c.uploadDate || c.date || "";
   return {
     ...c,
+    caseId,
+    lastUpdated,
     title: c.title || "Untitled Case",
     clientName: c.clientName || c.client || "Unknown Client",
     status: c.status || "Open",
@@ -823,17 +828,17 @@ function renderCases() {
     .map(
       (c) => `
       <tr>
-        <td>${escapeHtml(c.caseId)}</td>
+        <td>${escapeHtml(c.caseId || "-")}</td>
         <td>${escapeHtml(c.title)}</td>
         <td>${escapeHtml(c.clientName)}</td>
         <td><span class="tag status-${slug(c.status)}">${escapeHtml(c.status)}</span></td>
         <td><span class="tag priority-${slug(c.priority)}">${escapeHtml(c.priority)}</span></td>
         <td>${escapeHtml(c.caseType || "General")}</td>
-        <td>${formatDate(c.lastUpdated)}</td>
+        <td>${c.lastUpdated ? formatDate(c.lastUpdated) : "-"}</td>
         <td>
           <div class="action-inline">
-            <button class="btn btn-secondary" data-action="view-case" data-id="${escapeHtml(c.caseId)}">View</button>
-            <button class="btn btn-danger" data-action="delete-case" data-id="${escapeHtml(c.caseId)}">Delete</button>
+            <button class="btn btn-secondary" data-action="view-case" data-id="${escapeHtml(c.caseId || c.id || "")}">View</button>
+            <button class="btn btn-danger" data-action="delete-case" data-id="${escapeHtml(c.caseId || c.id || "")}">Delete</button>
           </div>
         </td>
       </tr>
@@ -902,10 +907,10 @@ async function createCase(e) {
 }
 
 function openCaseModal(caseId) {
-  const selected = state.cases.find((c) => String(c.caseId) === String(caseId));
+  const selected = state.cases.find((c) => String(c.caseId || c.id || "") === String(caseId));
   if (!selected) return;
 
-  state.selectedCaseId = selected.caseId;
+  state.selectedCaseId = selected.caseId || selected.id || "";
 
   ui.caseDetailBody.innerHTML = `
     <div class="detail-row"><strong>Case ID:</strong> ${escapeHtml(selected.caseId)}</div>
@@ -943,7 +948,7 @@ async function updateCase(e) {
   const caseId = state.selectedCaseId;
   if (!caseId) return;
 
-  const caseObj = state.cases.find((c) => c.caseId === caseId);
+  const caseObj = state.cases.find((c) => String(c.caseId || c.id || "") === String(caseId));
   if (!caseObj) return;
 
   const newStatus = ui.caseStatusSelect.value;
@@ -1021,6 +1026,11 @@ async function updateCase(e) {
 }
 
 async function removeCase(caseId) {
+  if (!caseId) {
+    showFlash("This case record is missing an ID and cannot be deleted.", "error");
+    return;
+  }
+
   const sure = confirm(`Delete case ${caseId}?`);
   if (!sure) return;
 
@@ -1031,7 +1041,7 @@ async function removeCase(caseId) {
       })
     );
 
-    state.cases = state.cases.filter((c) => String(c.caseId) !== String(caseId));
+    state.cases = state.cases.filter((c) => String(c.caseId || c.id || "") !== String(caseId));
     state.documents = state.documents.filter((d) => String(d.caseId) !== String(caseId));
     renderCases();
     renderDocuments();
@@ -1050,7 +1060,10 @@ async function removeCase(caseId) {
 
 function renderCaseOptionsForDocs() {
   const options = state.cases
-    .map((c) => `<option value="${escapeHtml(c.caseId)}">${escapeHtml(c.caseId)} - ${escapeHtml(c.title)}</option>`)
+    .map((c) => {
+      const id = c.caseId || c.id || "";
+      return `<option value="${escapeHtml(id)}">${escapeHtml(id)} - ${escapeHtml(c.title)}</option>`;
+    })
     .join("");
 
   ui.docCaseSelect.innerHTML = options || `<option value="">No cases available</option>`;

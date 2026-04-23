@@ -22,6 +22,14 @@ export async function apiRequest(path, options = {}) {
   return data;
 }
 
+export async function uploadFile(formData) {
+  const response = await fetch("/api/upload-file", { method: "POST", body: formData });
+  const text = await response.text();
+  const data = text ? safeJsonParse(text) : {};
+  if (!response.ok) throw new Error(data.message || `Upload failed (${response.status}).`);
+  return data;
+}
+
 function safeJsonParse(value) {
   try {
     return JSON.parse(value);

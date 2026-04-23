@@ -2,7 +2,23 @@ const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const express = require("express");
 const cors = require("cors");
+const multer = require("multer");
 const { checkDatabase, getSqlClient, setupDatabase } = require("./db");
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, path.join(__dirname, "uploads", "documents")),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    }
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png", ".txt", ".xlsx", ".pptx"];
+    cb(null, allowed.includes(path.extname(file.originalname).toLowerCase()));
+  }
+});
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -110,7 +126,8 @@ function dbDocToApp(row) {
     title: row.title,
     category: row.category || "Other",
     description: row.description || "",
-    updatedOn: row.updated_on || ""
+    updatedOn: row.updated_on || "",
+    fileUrl: row.file_url || ""
   };
 }
 
@@ -265,10 +282,11 @@ app.post("/api/save", async (req, res) => {
       const docId = String(d.docId || d.id || "").trim();
       if (!docId) continue;
       await sql`
-        INSERT INTO documents (doc_id, case_id, owner_id, client_id, lawyer_id, title, category, description, updated_on)
+        INSERT INTO documents (doc_id, case_id, owner_id, client_id, lawyer_id, title, category, description, updated_on, file_url)
         VALUES (${docId}, ${d.caseId || null}, ${d.ownerId || null}, ${d.clientId || null},
                 ${d.lawyerId || null}, ${String(d.name || d.title || "")},
-                ${String(d.category || "Other")}, ${String(d.description || "")}, ${String(d.updatedOn || "")})
+                ${String(d.category || "Other")}, ${String(d.description || "")},
+                ${String(d.updatedOn || "")}, ${String(d.fileUrl || "")})
       `;
     }
 
@@ -299,6 +317,14 @@ app.post("/api/save", async (req, res) => {
     console.error("Save error:", error.message);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ── File upload ──────────────────────────────────────────────────────────────
+
+app.post("/api/upload-file", upload.single("file"), (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file provided or file type not allowed." });
+  const fileUrl = `/uploads/documents/${req.file.filename}`;
+  res.json({ ok: true, fileUrl, originalName: req.file.originalname });
 });
 
 // ── Users ────────────────────────────────────────────────────────────────────

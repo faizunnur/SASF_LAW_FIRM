@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useInView } from "framer-motion";
-import { apiRequest } from "./api";
+import { apiRequest, uploadFile } from "./api";
 import {
   caseHighlights,
   faqs,
@@ -590,7 +590,8 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
   const [notice, setNotice] = useState("");
   const [apptForm, setApptForm] = useState({ type: CASE_CATEGORIES[0], date: "", time: "", lawyerId: "" });
   const [scheduleForm, setScheduleForm] = useState({ lawyerId: "", title: "", date: "", time: "", type: "Meeting" });
-  const [docForm, setDocForm] = useState({ caseId: "", title: "", category: "Evidence" });
+  const [docForm, setDocForm] = useState({ caseId: "", title: "", category: "Evidence", file: null });
+  const docFileRef = useRef(null);
   const [assistantPage, setAssistantPage] = useState("requests");
   const [assistantSearch, setAssistantSearch] = useState("");
   const [selectedAssistantCaseId, setSelectedAssistantCaseId] = useState("");
@@ -925,6 +926,10 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
       setNotice("Please choose case and document title.");
       return;
     }
+    if (!docForm.file) {
+      setNotice("Please select a file to upload.");
+      return;
+    }
     const selectedCase = db.cases.find((c) => getCaseId(c) === String(docForm.caseId));
     if (!selectedCase) return;
 
@@ -935,27 +940,37 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
     }
     if (role === "client" && String(selectedCase.clientId || "") !== String(currentUser.id)) return;
 
-    const id = `D-${Date.now()}`;
-    const nextDocs = [
-      {
-        docId: id,
-        id,
-        caseId: docForm.caseId,
-        ownerId: currentUser.id,
-        lawyerId: selectedCase.lawyerId || "",
-        clientId: selectedCase.clientId || "",
-        name: docForm.title.trim(),
-        title: docForm.title.trim(),
-        category: docForm.category,
-        fileType: docForm.category,
-        updatedOn: new Date().toISOString().slice(0, 10),
-        uploadDate: new Date().toISOString().slice(0, 10),
-        description: `${docForm.category} document`
-      },
-      ...db.documents
-    ];
-    await saveAll({ ...db, documents: nextDocs }, "Document submitted.");
-    setDocForm((prev) => ({ ...prev, title: "" }));
+    try {
+      const fd = new FormData();
+      fd.append("file", docForm.file);
+      const { fileUrl } = await uploadFile(fd);
+
+      const id = `D-${Date.now()}`;
+      const nextDocs = [
+        {
+          docId: id,
+          id,
+          caseId: docForm.caseId,
+          ownerId: currentUser.id,
+          lawyerId: selectedCase.lawyerId || "",
+          clientId: selectedCase.clientId || "",
+          name: docForm.title.trim(),
+          title: docForm.title.trim(),
+          category: docForm.category,
+          fileType: docForm.category,
+          fileUrl: fileUrl || "",
+          updatedOn: new Date().toISOString().slice(0, 10),
+          uploadDate: new Date().toISOString().slice(0, 10),
+          description: `${docForm.category} document`
+        },
+        ...db.documents
+      ];
+      await saveAll({ ...db, documents: nextDocs }, "Document uploaded.");
+      setDocForm((prev) => ({ ...prev, title: "", file: null }));
+      if (docFileRef.current) docFileRef.current.value = "";
+    } catch (err) {
+      setNotice(err.message || "Upload failed.");
+    }
   };
 
   const renameDocument = async (docId) => {
@@ -1263,12 +1278,14 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                   <option>Evidence</option><option>Contract</option><option>Notice</option><option>Other</option>
                 </select>
                 <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Submit</button>
+                <input ref={docFileRef} type="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.pptx" onChange={(e) => setDocForm((p) => ({ ...p, file: e.target.files[0] || null }))} className="col-span-full cursor-pointer rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700" />
               </form>
               <div className="mt-3 space-y-2">
                 {visibleDocs.map((d) => (
                   <div key={getDocId(d)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
                     <span className="text-sm text-slate-700">{d.name || d.title} ({d.category || d.fileType || "Doc"})</span>
                     <div className="flex gap-2">
+                      {d.fileUrl && <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded border border-slate-300 px-2 py-1 text-xs">View</a>}
                       <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1 text-xs">Rename</button>
                       <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600">Delete</button>
                     </div>
@@ -1436,12 +1453,14 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                           </select>
                           <input value={docForm.title} onChange={(e) => setDocForm((p) => ({ ...p, title: e.target.value }))} placeholder="Doc title" className="rounded border border-slate-300 px-2 py-1.5 text-xs" />
                           <button className={`rounded px-3 py-1.5 text-xs font-semibold text-white ${theme.accent}`}>Submit Doc</button>
+                          <input ref={docFileRef} type="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.pptx" onChange={(e) => setDocForm((p) => ({ ...p, file: e.target.files[0] || null }))} className="col-span-full cursor-pointer rounded border border-slate-300 px-2 py-1.5 text-xs text-slate-500 file:mr-2 file:cursor-pointer file:rounded file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700" />
                         </form>
                         <div className="space-y-2">
                           {selectedAssistantCaseDocs.length ? selectedAssistantCaseDocs.map((d) => (
                             <div key={getDocId(d)} className="flex items-center justify-between gap-2 rounded border border-slate-200 px-2 py-1.5 text-xs">
                               <span>{d.name || d.title}</span>
                               <div className="flex gap-2">
+                                {d.fileUrl && <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded border border-slate-300 px-2 py-1">View</a>}
                                 <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1">Edit</button>
                                 <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-rose-600">Delete</button>
                               </div>
@@ -1695,6 +1714,7 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                     <option>Evidence</option><option>Identity</option><option>Contract</option><option>Other</option>
                   </select>
                   <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Upload</button>
+                  <input ref={docFileRef} type="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.pptx" onChange={(e) => setDocForm((p) => ({ ...p, file: e.target.files[0] || null }))} className="col-span-full cursor-pointer rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-700" />
                 </form>
                 <div className="space-y-2">
                   {visibleDocs.length ? visibleDocs.map((d) => (
@@ -1704,6 +1724,7 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
                         {(d.category || d.fileType) && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">{d.category || d.fileType}</span>}
                       </div>
                       <div className="flex gap-2">
+                        {d.fileUrl && <a href={d.fileUrl} target="_blank" rel="noopener noreferrer" className="rounded border border-slate-300 px-2 py-1 text-xs">View</a>}
                         <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1 text-xs">Rename</button>
                         <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600">Delete</button>
                       </div>

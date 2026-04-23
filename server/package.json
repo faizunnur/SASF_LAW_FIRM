@@ -11,6 +11,7 @@
     "@neondatabase/serverless": "^1.0.1",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "multer": "^2.1.1"
   }
 }

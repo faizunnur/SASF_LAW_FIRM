@@ -149,6 +149,12 @@ async function setupDatabase() {
     await sql`INSERT INTO schema_version VALUES (2) ON CONFLICT (version) DO NOTHING`;
     console.log("Migration to v2 complete.");
   }
+
+  if (currentVersion < 3) {
+    await sql`ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_url TEXT NOT NULL DEFAULT ''`;
+    await sql`INSERT INTO schema_version VALUES (3) ON CONFLICT (version) DO NOTHING`;
+    console.log("Migration to v3 complete: added file_url to documents.");
+  }
 }
 
 module.exports = { checkDatabase, getSqlClient, setupDatabase };

@@ -225,6 +225,8 @@
                 <button class="table-btn notif-delete-btn" id="deleteSelectedNotifications" type="button">Delete Selected</button>
               </div>
             </div>
+            <div id="clientInboxSummary" class="client-inbox-summary hidden"></div>
+            <div id="clientInboxFilters" class="client-inbox-filters hidden"></div>
             <div id="notificationList" class="card-list"></div>
           </section>
 
@@ -274,7 +276,13 @@
             <div class="section-headline">
               <h3>My Active Cases</h3>
             </div>
-            <div id="clientCaseList" class="card-list"></div>
+            <div id="clientCaseStatusSummary" class="client-case-status-summary"></div>
+            <div class="client-case-layout">
+              <div id="clientCaseList" class="card-list client-case-list"></div>
+              <aside id="clientCaseInsight" class="client-case-insight hidden">
+                <div id="clientCaseInsightBody"></div>
+              </aside>
+            </div>
 
             <div id="documentManagement" class="hidden mt-20">
               <div class="section-headline">

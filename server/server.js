@@ -26,7 +26,9 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Initialize DB on start
-setupDatabase().then(() => console.log("Database schema verified.")).catch(e => console.error("DB Init Error:", e));
+setupDatabase()
+  .then(() => console.log("Database ready: system_state, users, cases, appointments, notifications, schedules, documents, transactions, audit_log all verified."))
+  .catch(e => console.error("DB Init Error:", e.message));
 
 async function getLatestState() {
   const sql = getSqlClient();

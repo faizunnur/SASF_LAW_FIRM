@@ -561,7 +561,7 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
   });
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
-  const [apptForm, setApptForm] = useState({ type: CASE_CATEGORIES[0], date: "", time: "" });
+  const [apptForm, setApptForm] = useState({ type: CASE_CATEGORIES[0], date: "", time: "", lawyerId: "" });
   const [scheduleForm, setScheduleForm] = useState({ lawyerId: "", title: "", date: "", time: "", type: "Meeting" });
   const [docForm, setDocForm] = useState({ caseId: "", title: "", category: "Evidence" });
   const [assistantPage, setAssistantPage] = useState("requests");
@@ -571,6 +571,8 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [clientTab, setClientTab] = useState("overview");
+  const [expandedCase, setExpandedCase] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -959,30 +961,92 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
     await saveAll({ ...db, documents: nextDocs }, "Document deleted.");
   };
 
+  const markNotificationRead = async (notifId) => {
+    const nextNotifications = db.notifications.map((n) =>
+      String(n.id || "") === String(notifId) ? { ...n, isRead: true, read: true } : n
+    );
+    await saveAll({ ...db, notifications: nextNotifications });
+  };
+
+  const markAllNotificationsRead = async () => {
+    const clientId = currentUser.id;
+    const nextNotifications = db.notifications.map((n) =>
+      String(n.userId || "") === String(clientId) ? { ...n, isRead: true, read: true } : n
+    );
+    await saveAll({ ...db, notifications: nextNotifications }, "All messages marked as read.");
+  };
+
   const bookAppointmentAsClient = async (e) => {
     e.preventDefault();
     if (role !== "client") return;
-    const assignedAssistant = findAssignedAssistant(apptForm.type);
-    const assignedLawyerId = assignedAssistant?.lawyerId || "";
-
-    if (!assignedAssistant) {
-      setNotice("No assistant is configured yet for this case category.");
+    if (!apptForm.lawyerId) {
+      setNotice("Please select a lawyer before submitting.");
+      return;
+    }
+    if (!apptForm.date || !apptForm.time) {
+      setNotice("Please choose a date and time.");
       return;
     }
 
+    // Find assistant assigned to the chosen lawyer (lawyerId field on assistant)
+    const assignedAssistant = db.users.find(
+      (u) =>
+        String(u.role || "").toLowerCase() === "assistant" &&
+        String(u.lawyerId || "") === String(apptForm.lawyerId)
+    );
+
+    // If an assistant is assigned, request goes to them; otherwise directly to the lawyer
+    const routeToUserId = assignedAssistant ? assignedAssistant.id : apptForm.lawyerId;
+    const routeToName =
+      assignedAssistant
+        ? assignedAssistant.name
+        : (db.users.find((u) => String(u.id) === String(apptForm.lawyerId))?.name || "Lawyer");
+    const appointmentStatus = assignedAssistant ? "Awaiting Assistant Review" : "Awaiting Lawyer Review";
+
+    const newApptId = `A-${Date.now()}`;
     const newAppointment = {
-      id: `A-${Date.now()}`,
+      id: newApptId,
       clientId: currentUser.id,
-      lawyerId: assignedLawyerId,
-      assistantId: assignedAssistant.id,
+      lawyerId: apptForm.lawyerId,
+      assistantId: assignedAssistant?.id || "",
       date: apptForm.date,
       time: apptForm.time,
       type: apptForm.type,
-      status: "Awaiting Assistant Review",
+      status: appointmentStatus,
       payment: "Pending"
     };
-    await saveAll({ ...db, appointments: [newAppointment, ...db.appointments] }, `Case request routed to ${assignedAssistant.name}.`);
-    setApptForm({ type: CASE_CATEGORIES[0], date: "", time: "" });
+
+    const newNotification = {
+      id: `N-${Date.now()}`,
+      userId: routeToUserId,
+      title: "New Appointment Request",
+      message: `Client ${currentUser.name || "Client"} has requested a ${apptForm.type} appointment on ${apptForm.date} at ${apptForm.time}.`,
+      date: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+
+    await saveAll(
+      { ...db, appointments: [newAppointment, ...db.appointments], notifications: [newNotification, ...db.notifications] },
+      `Request sent to ${routeToName} for approval.`
+    );
+    setApptForm({ type: CASE_CATEGORIES[0], date: "", time: "", lawyerId: "" });
+  };
+
+  const cancelAppointment = async (apptId) => {
+    if (role !== "client") return;
+    const appt = db.appointments.find((a) => getApptId(a) === String(apptId));
+    if (!appt) return;
+    if (String(appt.clientId || "") !== String(currentUser.id)) return;
+    const cancellable = ["Awaiting Assistant Review", "Awaiting Lawyer Review", "Pending"];
+    if (!cancellable.includes(appt.status)) {
+      setNotice("This appointment can no longer be cancelled.");
+      return;
+    }
+    const confirmed = window.confirm("Cancel this appointment request?");
+    if (!confirmed) return;
+    const nextAppointments = db.appointments.filter((a) => getApptId(a) !== String(apptId));
+    await saveAll({ ...db, appointments: nextAppointments }, "Appointment cancelled.");
   };
 
   const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
@@ -1008,6 +1072,10 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
   const selectedAssistantCase = assistantCases.find((c) => getCaseId(c) === String(selectedAssistantCaseId || ""));
   const clientAppointments = db.appointments.filter((a) => String(a.clientId || "") === String(currentUser.id || ""));
   const clientCases = db.cases.filter((c) => String(c.clientId || "") === String(currentUser.id || ""));
+  const clientNotifications = db.notifications
+    .filter((n) => String(n.userId || "") === String(currentUser.id || ""))
+    .sort((a, b) => new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0));
+  const clientUnreadCount = clientNotifications.filter((n) => !n.isRead && !n.read).length;
   const visibleSchedules =
     role === "admin"
       ? db.schedules
@@ -1413,68 +1481,255 @@ function RoleWorkspace({ sessionUser, users, onLogout }) {
 
         {role === "client" ? (
           <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.07)]">
-            <h2 className="font-serif text-4xl text-slate-900">Client Portal</h2>
-            <form onSubmit={bookAppointmentAsClient} className="grid gap-3 md:grid-cols-4">
-              <select value={apptForm.type} onChange={(e) => setApptForm((p) => ({ ...p, type: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                {CASE_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-              <input type="date" value={apptForm.date} onChange={(e) => setApptForm((p) => ({ ...p, date: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-              <input type="time" value={apptForm.time} onChange={(e) => setApptForm((p) => ({ ...p, time: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-              <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Request Appointment</button>
-            </form>
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <p className="text-sm font-semibold text-slate-700">My Appointments</p>
-                <div className="mt-3 space-y-2">
-                  {clientAppointments.length ? clientAppointments.map((a) => (
-                    <div key={a.id || a.appointmentId} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-sm text-slate-900">{a.type} on {a.date} {a.time}</p>
-                      <p className="text-xs text-slate-500">Status: {a.status || "Pending"}</p>
-                    </div>
-                  )) : <p className="text-sm text-slate-500">No appointments booked yet.</p>}
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-700">My Cases</p>
-                <div className="mt-3 space-y-2">
-                  {clientCases.length ? clientCases.map((c) => (
-                    <div key={c.id || c.caseId} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-sm font-semibold text-slate-900">{c.title || "Untitled Case"}</p>
-                      <p className="text-xs text-slate-500">Status: {c.status || "In Progress"}</p>
-                    </div>
-                  )) : <p className="text-sm text-slate-500">No active cases yet.</p>}
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-serif text-4xl text-slate-900">Client Portal</h2>
+              {clientUnreadCount > 0 && (
+                <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-bold text-white">
+                  {clientUnreadCount} unread {clientUnreadCount === 1 ? "message" : "messages"}
+                </span>
+              )}
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="mb-3 text-sm font-semibold text-slate-800">My Case Documents</p>
-              <form onSubmit={addDocument} className="grid gap-3 md:grid-cols-4">
-                <select value={docForm.caseId} onChange={(e) => setDocForm((p) => ({ ...p, caseId: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                  <option value="">Select case</option>
-                  {docsCaseOptions.map((c) => <option key={getCaseId(c)} value={getCaseId(c)}>{c.title}</option>)}
-                </select>
-                <input value={docForm.title} onChange={(e) => setDocForm((p) => ({ ...p, title: e.target.value }))} placeholder="Document title" required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
-                <select value={docForm.category} onChange={(e) => setDocForm((p) => ({ ...p, category: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                  <option>Evidence</option><option>Identity</option><option>Contract</option><option>Other</option>
-                </select>
-                <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Upload</button>
-              </form>
-              <div className="mt-3 space-y-2">
-                {visibleDocs.map((d) => (
-                  <div key={getDocId(d)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-                    <span className="text-sm text-slate-700">{d.name || d.title}</span>
-                    <div className="flex gap-2">
-                      <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1 text-xs">Rename</button>
-                      <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600">Delete</button>
-                    </div>
+
+            <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-1">
+              {[
+                { id: "overview", label: "Overview" },
+                { id: "cases", label: "Case Status" },
+                { id: "documents", label: "Documents" },
+                { id: "inbox", label: clientUnreadCount > 0 ? `Inbox (${clientUnreadCount})` : "Inbox" }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setClientTab(tab.id)}
+                  className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition ${clientTab === tab.id ? `text-white ${theme.accent}` : "text-slate-600 hover:text-slate-900"}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {clientTab === "overview" && (
+              <div className="space-y-5">
+                <div>
+                  <p className="mb-3 text-sm font-semibold text-slate-700">Request New Appointment</p>
+                  <form onSubmit={bookAppointmentAsClient} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <select
+                      value={apptForm.lawyerId}
+                      onChange={(e) => setApptForm((p) => ({ ...p, lawyerId: e.target.value }))}
+                      required
+                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      <option value="">— Select Lawyer —</option>
+                      {lawyersOnly.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name}{l.department ? ` · ${l.department}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={apptForm.type}
+                      onChange={(e) => setApptForm((p) => ({ ...p, type: e.target.value }))}
+                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                    >
+                      {CASE_CATEGORIES.map((category) => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="date"
+                      value={apptForm.date}
+                      onChange={(e) => setApptForm((p) => ({ ...p, date: e.target.value }))}
+                      required
+                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      type="time"
+                      value={apptForm.time}
+                      onChange={(e) => setApptForm((p) => ({ ...p, time: e.target.value }))}
+                      required
+                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                    />
+                    {apptForm.lawyerId && (() => {
+                      const assignedAst = db.users.find(
+                        (u) => String(u.role || "").toLowerCase() === "assistant" && String(u.lawyerId || "") === String(apptForm.lawyerId)
+                      );
+                      return (
+                        <p className="col-span-full text-xs text-slate-500">
+                          {assignedAst
+                            ? `Request will go to ${assignedAst.name} (assistant) for approval.`
+                            : "Request will go directly to the selected lawyer for approval."}
+                        </p>
+                      );
+                    })()}
+                    <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>
+                      Request Appointment
+                    </button>
+                  </form>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">My Appointments</p>
+                  <div className="mt-3 space-y-2">
+                    {clientAppointments.length ? clientAppointments.map((a) => {
+                      const aId = getApptId(a);
+                      const isCancellable = ["Awaiting Assistant Review", "Awaiting Lawyer Review", "Pending"].includes(a.status);
+                      const apptLawyer = db.users.find((u) => String(u.id) === String(a.lawyerId || ""));
+                      return (
+                        <div key={aId} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">{a.type} — {a.date} at {a.time}</p>
+                              {apptLawyer && <p className="mt-0.5 text-xs text-slate-500">Lawyer: {apptLawyer.name}</p>}
+                              <p className="mt-0.5 text-xs text-slate-500">Status: {a.status || "Pending"}</p>
+                            </div>
+                            {isCancellable && (
+                              <button
+                                onClick={() => cancelAppointment(aId)}
+                                className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }) : <p className="text-sm text-slate-500">No appointments booked yet.</p>}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {clientTab === "cases" && (
+              <div className="space-y-3">
+                {clientCases.length ? clientCases.map((c) => {
+                  const cId = getCaseId(c);
+                  const isExpanded = expandedCase === cId;
+                  const statusColorMap = {
+                    "Open": "bg-blue-100 text-blue-800",
+                    "In Progress": "bg-amber-100 text-amber-800",
+                    "Review": "bg-purple-100 text-purple-800",
+                    "Pending": "bg-slate-100 text-slate-700",
+                    "Pending Lawyer Review": "bg-orange-100 text-orange-800",
+                    "Closed": "bg-green-100 text-green-800",
+                    "On Hold": "bg-rose-100 text-rose-800",
+                    "Accepted by Assistant": "bg-teal-100 text-teal-800"
+                  };
+                  const statusColor = statusColorMap[c.status] || "bg-slate-100 text-slate-700";
+                  const assignedLawyer = db.users.find((u) => String(u.id || "") === String(c.lawyerId || ""));
+                  const assignedAssistant = db.users.find((u) => String(u.id || "") === String(c.assistantId || ""));
+                  return (
+                    <div key={cId} className="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
+                      <button
+                        onClick={() => setExpandedCase(isExpanded ? null : cId)}
+                        className="flex w-full items-center justify-between px-4 py-3 text-left"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColor}`}>
+                            {c.status || "In Progress"}
+                          </span>
+                          <p className="text-sm font-semibold text-slate-900">{c.title || "Untitled Case"}</p>
+                        </div>
+                        <span className="ml-3 flex-shrink-0 text-xs text-slate-400">{isExpanded ? "▲" : "▼"}</span>
+                      </button>
+                      {isExpanded && (
+                        <div className="border-t border-slate-200 bg-white px-4 py-4 space-y-3">
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                            <div><span className="text-slate-500">Case ID:</span><span className="ml-1 font-medium text-slate-800">{cId}</span></div>
+                            <div><span className="text-slate-500">Type:</span><span className="ml-1 font-medium text-slate-800">{c.type || c.caseType || "—"}</span></div>
+                            <div><span className="text-slate-500">Priority:</span><span className="ml-1 font-medium text-slate-800">{c.priority || "—"}</span></div>
+                            <div><span className="text-slate-500">Hearing Date:</span><span className="ml-1 font-medium text-slate-800">{c.hearingDate || "—"}</span></div>
+                            {assignedLawyer && <div><span className="text-slate-500">Assigned Lawyer:</span><span className="ml-1 font-medium text-slate-800">{assignedLawyer.name}</span></div>}
+                            {assignedAssistant && <div><span className="text-slate-500">Assigned Assistant:</span><span className="ml-1 font-medium text-slate-800">{assignedAssistant.name}</span></div>}
+                            {c.lastUpdated && (
+                              <div className="col-span-2"><span className="text-slate-500">Last Updated:</span><span className="ml-1 font-medium text-slate-800">{new Date(c.lastUpdated).toLocaleString()}</span></div>
+                            )}
+                          </div>
+                          {(c.progressNote || c.notes) && (
+                            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Progress Update</p>
+                              <p className="text-sm text-slate-700">{c.progressNote || c.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }) : <p className="text-sm text-slate-500">No active cases yet.</p>}
+              </div>
+            )}
+
+            {clientTab === "documents" && (
+              <div className="space-y-4">
+                <form onSubmit={addDocument} className="grid gap-3 md:grid-cols-4">
+                  <select value={docForm.caseId} onChange={(e) => setDocForm((p) => ({ ...p, caseId: e.target.value }))} required className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    <option value="">Select case</option>
+                    {docsCaseOptions.map((c) => <option key={getCaseId(c)} value={getCaseId(c)}>{c.title}</option>)}
+                  </select>
+                  <input value={docForm.title} onChange={(e) => setDocForm((p) => ({ ...p, title: e.target.value }))} placeholder="Document title" required className="rounded-xl border border-slate-300 px-3 py-2 text-sm" />
+                  <select value={docForm.category} onChange={(e) => setDocForm((p) => ({ ...p, category: e.target.value }))} className="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    <option>Evidence</option><option>Identity</option><option>Contract</option><option>Other</option>
+                  </select>
+                  <button className={`rounded-xl px-4 py-2 text-sm font-semibold text-white ${theme.accent}`}>Upload</button>
+                </form>
+                <div className="space-y-2">
+                  {visibleDocs.length ? visibleDocs.map((d) => (
+                    <div key={getDocId(d)} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div>
+                        <span className="text-sm text-slate-700">{d.name || d.title}</span>
+                        {(d.category || d.fileType) && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">{d.category || d.fileType}</span>}
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => renameDocument(getDocId(d))} className="rounded border border-slate-300 px-2 py-1 text-xs">Rename</button>
+                        <button onClick={() => removeDocument(getDocId(d))} className="rounded border border-rose-300 px-2 py-1 text-xs text-rose-600">Delete</button>
+                      </div>
+                    </div>
+                  )) : <p className="text-sm text-slate-500">No documents uploaded yet.</p>}
+                </div>
+              </div>
+            )}
+
+            {clientTab === "inbox" && (
+              <div className="space-y-3">
+                {clientNotifications.length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-slate-500">{clientNotifications.length} {clientNotifications.length === 1 ? "message" : "messages"}</p>
+                    {clientUnreadCount > 0 && (
+                      <button onClick={markAllNotificationsRead} className="text-xs text-slate-500 underline hover:text-slate-800">
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+                )}
+                {clientNotifications.length ? clientNotifications.map((n) => {
+                  const isUnread = !n.isRead && !n.read;
+                  return (
+                    <div
+                      key={n.id}
+                      className={`rounded-xl border p-4 ${isUnread ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-slate-50"}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            {isUnread && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-rose-500" />}
+                            <p className="text-sm font-semibold text-slate-900">{n.title || "Message"}</p>
+                          </div>
+                          <p className="mt-1 text-sm text-slate-700">{n.message}</p>
+                          <p className="mt-1.5 text-xs text-slate-400">
+                            {n.createdAt ? new Date(n.createdAt).toLocaleString() : n.date || ""}
+                          </p>
+                        </div>
+                        {isUnread && (
+                          <button
+                            onClick={() => markNotificationRead(n.id)}
+                            className="flex-shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-600 hover:border-slate-400"
+                          >
+                            Mark read
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }) : <p className="text-sm text-slate-500">Your inbox is empty.</p>}
+              </div>
+            )}
           </section>
         ) : null}
       </div>

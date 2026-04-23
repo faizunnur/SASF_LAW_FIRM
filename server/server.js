@@ -516,6 +516,10 @@ app.use((req, res) => {
 
 
 
-app.listen(PORT, () => {
-  console.log(`SASF Law Firm server running at http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`SASF Law Firm server running at http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

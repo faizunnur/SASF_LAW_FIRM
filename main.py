@@ -39,22 +39,9 @@ print("TARGET MODEL: gemini-flash-latest")
 
 # System Prompt
 SYSTEM_PROMPT = """
-You are "Self Lawyer Bangladesh", a professional, empathetic, and unbiased legal AI assistant.
-Your goal is to help citizens understand their legal rights and navigate the Bangladeshi legal system.
-
-Identify legal categories (Criminal, Family, Property, Cybercrime, Fraud) from natural language (English, Bangla).
-
-CRITICAL FORMATTING RULES:
-- DO NOT use markdown headers like `#`, `##`, or `###`. Telegram cannot parse them correctly.
-- Provide your response using the following structured sections and emojis. **IMPORTANT: You must TRANSLATE the section titles (like "Relevant Law Section", "Action Plan") into the requested language.**
-
-⚖️ Relevant Law: (Section & Law Name)
-💡 Explanation: (1-2 sentences)
-✅ Action: (Brief steps)
-📄 Docs: (List)
-🛡️ Plan B: (FIR refusal guide - for Criminal)
-📦 Zimmanama: (Recovery guide - for Theft)
-Respond in the requested language. End with: "⚠️ AI Disclaimer: For educational purposes only."
+You are the "SASF LAW FIRM" Digital Assistant.
+Your goal is to help users categorize their legal issues.
+Always be professional and strictly follow the categorization instructions.
 """
 
 # Initialize model with system instruction
@@ -101,19 +88,26 @@ def get_emergency_keyboard():
 def get_main_menu(lang='English'):
     """Generate professional persistent menu with optimized grid."""
     if lang == 'Bangla':
+        # ONLY keeping Start, Category Select, GD, Location and Language for SASF Law Firm demo
         keyboard = [
-            ["🚀 নতুন করে শুরু করুন", "🔍 স্মার্ট কেস বিশ্লেষণ"],
-            ["📄 প্রফেশনাল জিডি (GD)", "📅 ডেডলাইন ট্র্যাকার"],
-            [KeyboardButton(text="📍 নিকটস্থ থানা (Police Station)", request_location=True), "📚 আপনার অধিকার জানুন"],
-            ["🌐 ভাষা পরিবর্তন", "❓ সাহায্য", "🧹 ইতিহাস মুছুন"]
+            ["🚀 নতুন করে শুরু করুন", "⚖️ আইনি বিভাগ শনাক্ত করুন"],
+            ["📄 প্রফেশনাল জিডি (GD)"],
+            [KeyboardButton(text="📍 নিকটস্থ থানা (Police Station)", request_location=True), "🌐 ভাষা পরিবর্তন"]
         ]
     else:
+        # ONLY keeping Start, Category Select, GD, Location and Language for SASF Law Firm demo
         keyboard = [
-            ["🚀 Start New", "🔍 Smart Case Analysis"],
-            ["📄 Professional GD", "📅 Deadline Tracker"],
-            [KeyboardButton(text="📍 Nearest Police Station", request_location=True), "📚 Know Your Rights"],
-            ["🌐 Change Language", "❓ Help & Features", "🧹 Clear History"]
+            ["🚀 Start New", "⚖️ Identify Legal Category"],
+            ["📄 Professional GD"],
+            [KeyboardButton(text="📍 Nearest Police Station", request_location=True), "🌐 Change Language"]
         ]
+        # OLD MENU KEPT FOR FUTURE:
+        # keyboard = [
+        #     ["🚀 Start New", "🔍 Smart Case Analysis"],
+        #     ["📄 Professional GD", "📅 Deadline Tracker"],
+        #     [KeyboardButton(text="📍 Nearest Police Station", request_location=True), "📚 Know Your Rights"],
+        #     ["🌐 Change Language", "❓ Help & Features", "🧹 Clear History"]
+        # ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, is_persistent=True)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -123,15 +117,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     lang = user_prefs.get(user_id, {}).get('lang', 'English')
     
     welcome_msg = (
-        f"Greetings {user.first_name}! I am <b>Self Lawyer Bangladesh</b>, your 24/7 Digital Legal Assistant.\n\n"
-        "I can help you analyze legal issues, find relevant laws in Bangladesh, and provide step-by-step roadmaps.\n\n"
-        "Please use the menu below to explore my features or simply describe your legal issue to get started."
+        f"Greetings {user.first_name}! Welcome to the <b>SASF LAW FIRM</b> Digital Assistant.\n\n"
+        "I can help you identify which category of law your issue belongs to so you can easily find the right legal consultant.\n\n"
+        "Please briefly describe your incident, or use the menu below to get started!"
     )
     if lang == 'Bangla':
         welcome_msg = (
-            f"শুভেচ্ছা {user.first_name}! আমি <b>সেলফ লয়ার বাংলাদেশ</b>, আপনার ২৪/৭ ডিজিটাল আইনি সহকারী।\n\n"
-            "আমি আপনাকে আইনি সমস্যা বিশ্লেষণ করতে, বাংলাদেশের প্রাসঙ্গিক আইন খুঁজে পেতে এবং ধাপে ধাপে দিকনির্দেশনা দিতে সাহায্য করতে পারি।\n\n"
-            "আমার ফিচারগুলো দেখতে নিচের মেনু ব্যবহার করুন অথবা আপনার আইনি সমস্যাটি লিখুন।"
+            f"শুভেচ্ছা {user.first_name}! <b>SASF LAW FIRM</b> ডিজিটাল অ্যাসিস্ট্যান্টে আপনাকে স্বাগতম।\n\n"
+            "আমি আপনার আইনি সমস্যাটি কোন বিভাগের অধীনে পড়ে তা শনাক্ত করতে সাহায্য করব, যাতে আপনি সঠিক আইনজীবীর পরামর্শ নিতে পারেন।\n\n"
+            "দয়া করে সংক্ষেপে আপনার ঘটনাটি বর্ণনা করুন, বা শুরু করতে নিচের মেনুটি ব্যবহার করুন!"
         )
     
     await update.message.reply_text(welcome_msg, parse_mode="HTML", reply_markup=get_main_menu(lang))
@@ -722,6 +716,14 @@ async def show_rights_cards(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     else:
         await update.callback_query.message.reply_text(msg, parse_mode="Markdown")
 
+async def prompt_identify_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Prompt user to describe issue for category identification."""
+    lang = user_prefs.get(update.effective_user.id, {}).get('lang', 'English')
+    msg = "Please describe your incident or legal issue, and I will identify which category of law it belongs to."
+    if lang == 'Bangla':
+        msg = "অনুগ্রহ করে আপনার আইনি সমস্যা বা ঘটনাটি বর্ণনা করুন, আমি জানিয়ে দেব এটি কোন আইনি বিভাগের অধীনে পড়ে।"
+    await update.message.reply_text(msg)
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle incoming messages and query Gemini or route menu clicks."""
     user_id = update.effective_user.id
@@ -746,6 +748,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "🚀 নতুন করে শুরু করুন": start_new,
             "🌐 Change Language": set_language,
             "🌐 ভাষা পরিবর্তন": set_language,
+            "⚖️ Identify Legal Category": prompt_identify_category,
+            "⚖️ আইনি বিভাগ শনাক্ত করুন": prompt_identify_category,
+            # KEEPING OLD ONES COMMENTED/HIDDEN BUT FUNCTIONAL IF MANUALLY TRIGGERED
             "❓ Help & Features": help_command,
             "❓ সাহায্য": help_command,
             "🧹 Clear History": clear_history,
@@ -761,22 +766,43 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if user_id not in user_history:
         user_history[user_id] = []
 
-    # RAG Retrieval - Reducing to 1 result to stay within free tier quota
-    search_results = rag.query_laws(user_text, n_results=1)
-    context_text = "\n\n".join(search_results['documents'][0])
-    
-    # Prepare prompt with context and language preference
-    lang = user_prefs.get(user_id, {}).get('lang', 'English')
-    prompt_with_context = f"Relevant Law Context:\n{context_text}\n\nUser Question: {user_text}\n\nPlease respond in {lang}."
+    category_list = """
+1. Criminal Law (Theft, fraud, assault, Drug offenses, Cybercrime, Bail & trial defense)
+2. Civil Law (Property disputes, Contract disputes, Defamation cases, Recovery of money)
+3. Family Law (Divorce, Child custody, Alimony, Domestic violence)
+4. Corporate / Business Law (Company registration, M&A, Compliance, Shareholder disputes)
+5. Property / Real Estate Law (Land ownership, Registration, Tenant-landlord, Land acquisition)
+6. Labor & Employment Law (Employee rights, Wrongful termination, Workplace harassment, Union issues)
+7. Intellectual Property (IP) Law (Trademark, Copyright, Patent, Brand protection)
+8. Tax Law (Income tax, VAT, Tax compliance)
+9. Immigration Law (Visa processing, Work permits, Citizenship, Deportation)
+10. Cyber Law / IT Law (Online fraud, Data breaches, Digital contracts, Social media issues)
+11. Environmental Law (Pollution, Environmental compliance, Industrial regulation)
+12. Constitutional / Administrative Law (Fundamental rights, Government decisions, PIL)
+"""
+
+    # Prepare prompt for SASF LAW FIRM Category Identification
+    prompt_with_context = f"""
+You are an AI legal categorizer for SASF LAW FIRM. 
+Analyze the following user issue and strictly classify it into EXACTLY ONE of the following 12 legal categories:
+{category_list}
+
+User Issue: {user_text}
+
+Respond in {lang}.
+Start your response with the category name in bold HTML tags, like "<b>[Category Name]</b>".
+Then briefly explain in 1-2 sentences why it falls under this category.
+Finally, conclude with: "Please visit the <b>SASF LAW FIRM</b> website and consult with a lawyer specializing in <b>[Category Name]</b>." (Translate to Bangla if lang is Bangla, but keep "<b>SASF LAW FIRM</b>" bold).
+Do NOT provide full legal advice, roadmaps, or external laws, ONLY the categorization and direction to the website.
+Use ONLY HTML tags like <b> for bold, do not use Markdown asterisks (**).
+"""
 
     # Get response from Gemini
     try:
-        # Start chat with existing history
-        chat_session = model.start_chat(history=user_history[user_id])
-        
+        # Use direct generate_content without history to strictly enforce the new category prompt 
+        # and prevent old conversation instructions (like Plan B/Zimmanama) from bleeding in.
         logger.info(f"Querying Gemini for user {user_id}...")
-        # Check if response has content
-        response = chat_session.send_message(prompt_with_context)
+        response = model.generate_content(prompt_with_context)
         
         if not response.candidates:
             raise ValueError("No response generated by the model (possibly due to safety filters).")
@@ -786,20 +812,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Update persistent history with CLEAN messages (no RAG context)
         # This prevents the history from growing too fast and hitting quota limits
+        user_history[user_id].clear() # Cleared to ensure fresh state for SASF categorization demo
         user_history[user_id].append({"role": "user", "parts": [user_text]})
         user_history[user_id].append({"role": "model", "parts": [bot_response]})
 
         # Safeguards and Procedural Timeline logic
         lower_combined = (user_text + " " + bot_response).lower()
         if any(kw in lower_combined for kw in ["forgery", "fake signature", "fraud"]):
-            bot_response += "\n\n⚠️ *Legal Warning:* Under Section 193 of the Penal Code 1860, fabricating false evidence is a crime punishable by up to 7 years in prison."
+            bot_response += "\n\n⚠️ <b>Legal Warning:</b> Under Section 193 of the Penal Code 1860, fabricating false evidence is a crime punishable by up to 7 years in prison."
 
-        # Send response with Markdown fallback and emergency button
+        # Send response with HTML fallback and emergency button
         reply_markup = get_emergency_keyboard()
         try:
-            if reply_func: await reply_func(bot_response, parse_mode="Markdown", reply_markup=reply_markup)
+            if reply_func: await reply_func(bot_response, parse_mode="HTML", reply_markup=reply_markup)
         except Exception as telegram_err:
-            logger.warning(f"Markdown parsing failed, sending as plain text: {telegram_err}")
+            logger.warning(f"HTML parsing failed, sending as plain text: {telegram_err}")
             if reply_func: await reply_func(bot_response, reply_markup=reply_markup)
             
     except genai.types.generation_types.StopCandidateException as e:

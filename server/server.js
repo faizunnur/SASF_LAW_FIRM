@@ -51,6 +51,8 @@ function dbUserToApp(row) {
     password: row.password,
     role: row.role,
     phone: row.phone || "",
+    barId: row.bar_id || "",
+    specialization: row.specialization || row.department || "",
     department: row.department || "",
     level: row.level || "",
     image_url: row.image_url || "",
@@ -125,9 +127,11 @@ function dbDocToApp(row) {
     name: row.title,
     title: row.title,
     category: row.category || "Other",
+    fileType: row.category || "Other",
     description: row.description || "",
+    uploadDate: row.upload_date || row.updated_on || "",
     updatedOn: row.updated_on || "",
-    fileUrl: row.file_url || ""
+    fileUrl: row.file_url || row.file_path || ""
   };
 }
 
@@ -156,6 +160,19 @@ function dbTxToApp(row) {
     status: row.status,
     date: row.tx_date || ""
   };
+}
+
+function normalizeDocumentCategory(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw === "evidence") return "Evidence";
+  if (raw === "identity") return "Identity";
+  if (raw === "contract") return "Contract";
+  if (raw === "notice") return "Notice";
+  return "Other";
+}
+
+function makeId(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 // ── Health & DB check ────────────────────────────────────────────────────────
@@ -231,9 +248,11 @@ app.post("/api/save", async (req, res) => {
       const role   = ["admin","lawyer","assistant","client"].includes(u.role) ? u.role : "client";
       const status = ["active","blocked"].includes(u.status) ? u.status : "active";
       await sql`
-        INSERT INTO users (id, name, email, password, role, phone, department, level, image_url, verified, status, lawyer_id)
+        INSERT INTO users (id, name, email, password, role, phone, bar_id, specialization, department, level, image_url, verified, status, lawyer_id)
         VALUES (${id}, ${String(u.name || "")}, ${String(u.email || "").toLowerCase()},
                 ${String(u.password || "")}, ${role}, ${String(u.phone || "")},
+                ${String(u.barId || u.bar_id || u.bar_council_id || "")},
+                ${String(u.specialization || u.department || "")},
                 ${String(u.department || "")}, ${String(u.level || "")}, ${String(u.image_url || "")},
                 ${Boolean(u.verified)}, ${status}, ${u.lawyerId || null})
       `;
@@ -281,11 +300,12 @@ app.post("/api/save", async (req, res) => {
     for (const d of documents) {
       const docId = String(d.docId || d.id || "").trim();
       if (!docId) continue;
+      const category = normalizeDocumentCategory(d.category || d.fileType);
       await sql`
         INSERT INTO documents (doc_id, case_id, owner_id, client_id, lawyer_id, title, category, description, updated_on, file_url)
         VALUES (${docId}, ${d.caseId || null}, ${d.ownerId || null}, ${d.clientId || null},
                 ${d.lawyerId || null}, ${String(d.name || d.title || "")},
-                ${String(d.category || "Other")}, ${String(d.description || "")},
+                ${category}, ${String(d.description || "")},
                 ${String(d.updatedOn || "")}, ${String(d.fileUrl || "")})
       `;
     }
@@ -299,6 +319,13 @@ app.post("/api/save", async (req, res) => {
         VALUES (${id}, ${n.userId || null}, ${n.lawyerId || null},
                 ${String(n.title || "")}, ${String(n.message || "")},
                 ${notifDate}, ${Boolean(n.read || n.isRead)})
+        ON CONFLICT (id) DO UPDATE SET
+          user_id = EXCLUDED.user_id,
+          lawyer_id = EXCLUDED.lawyer_id,
+          title = EXCLUDED.title,
+          message = EXCLUDED.message,
+          notif_date = EXCLUDED.notif_date,
+          is_read = EXCLUDED.is_read
       `;
     }
 
@@ -437,7 +464,7 @@ app.post("/api/cases", async (req, res) => {
     if (b.lawyerId) {
       await sql`
         INSERT INTO notifications (id, user_id, title, message, notif_date, is_read)
-        VALUES (${`N-${Date.now()}`}, ${b.lawyerId}, 'Case Created',
+        VALUES (${makeId("N")}, ${b.lawyerId}, 'Case Created',
                 ${`Case ${caseId} was created successfully.`},
                 ${new Date().toISOString().slice(0, 10)}, false)
       `;
@@ -456,7 +483,7 @@ app.put("/api/cases/status", async (req, res) => {
     if (c.lawyer_id) {
       await sql`
         INSERT INTO notifications (id, user_id, title, message, notif_date, is_read)
-        VALUES (${`N-${Date.now()}`}, ${c.lawyer_id}, 'Case Status Updated',
+        VALUES (${makeId("N")}, ${c.lawyer_id}, 'Case Status Updated',
                 ${`Case ${caseId} status changed to ${newStatus}.`},
                 ${new Date().toISOString().slice(0, 10)}, false)
       `;
@@ -491,7 +518,7 @@ app.put("/api/cases/update", async (req, res) => {
     if (c.lawyer_id) {
       await sql`
         INSERT INTO notifications (id, user_id, title, message, notif_date, is_read)
-        VALUES (${`N-${Date.now()}`}, ${c.lawyer_id}, 'Case Updated',
+        VALUES (${makeId("N")}, ${c.lawyer_id}, 'Case Updated',
                 ${`Case ${caseId} was updated with new notes.`},
                 ${new Date().toISOString().slice(0, 10)}, false)
       `;
@@ -528,13 +555,15 @@ app.get("/api/documents", async (req, res) => {
 app.post("/api/documents", async (req, res) => {
   try {
     const sql = getSqlClient();
-    const docId = `D-${Date.now()}`;
+    const docId = makeId("D");
     const b = req.body;
+    const category = normalizeDocumentCategory(b.category || b.fileType);
+    const filePath = String(b.fileUrl || b.filePath || "").trim() || null;
     await sql`
-      INSERT INTO documents (doc_id, case_id, owner_id, lawyer_id, title, category, description, updated_on)
+      INSERT INTO documents (doc_id, case_id, owner_id, lawyer_id, title, category, description, updated_on, file_url)
       VALUES (${docId}, ${b.caseId || null}, ${b.lawyerId || null}, ${b.lawyerId || null},
-              ${b.title || ""}, ${b.fileType || "PDF"}, ${b.description || ""},
-              ${new Date().toISOString().slice(0, 10)})
+              ${b.title || ""}, ${category}, ${b.description || ""},
+              ${new Date().toISOString().slice(0, 10)}, ${filePath})
     `;
     res.json({ ok: true, docId });
   } catch (e) { res.status(500).json({ message: e.message }); }
@@ -550,7 +579,9 @@ app.put("/api/documents", async (req, res) => {
       UPDATE documents SET
         title       = ${b.title       !== undefined ? b.title       : doc.title},
         description = ${b.description !== undefined ? b.description : doc.description},
-        case_id     = ${b.caseId      !== undefined ? (b.caseId || null) : doc.case_id}
+        case_id     = ${b.caseId      !== undefined ? (b.caseId || null) : doc.case_id},
+        category    = ${b.category    !== undefined ? normalizeDocumentCategory(b.category) : doc.category},
+        file_url    = ${b.fileUrl     !== undefined ? (String(b.fileUrl || "").trim() || null) : doc.file_url}
       WHERE doc_id = ${b.docId}
     `;
     res.json({ ok: true });
@@ -686,7 +717,9 @@ app.put("/api/lawyer/profile", async (req, res) => {
       UPDATE users SET
         name  = ${req.body.name  !== undefined ? req.body.name  : user.name},
         email = ${req.body.email !== undefined ? req.body.email : user.email},
-        phone = ${req.body.phone !== undefined ? req.body.phone : user.phone}
+        phone = ${req.body.phone !== undefined ? req.body.phone : user.phone},
+        bar_id = ${req.body.barId !== undefined ? req.body.barId : user.bar_id},
+        specialization = ${req.body.specialization !== undefined ? req.body.specialization : user.specialization}
       WHERE id = ${lawyerId}
     `;
     res.json({ ok: true });

@@ -39,6 +39,11 @@ let currentMonth = new Date();
       activeApptsTableBody: document.getElementById("activeApptsTableBody"),
       casesTableBody: document.getElementById("casesTableBody"),
       caseDataGrid: document.getElementById("caseDataGrid"),
+      docUploadForm: document.getElementById("docUploadForm"),
+      docUploadCaseId: document.getElementById("docUploadCaseId"),
+      docUploadTitle: document.getElementById("docUploadTitle"),
+      docUploadCategory: document.getElementById("docUploadCategory"),
+      docUploadFile: document.getElementById("docUploadFile"),
       calendarGrid: document.getElementById("calendarGrid"),
       calendarMonthLabel: document.getElementById("calendarMonthLabel"),
       lawyerNameLabel: document.getElementById("lawyerNameLabel"),
@@ -54,13 +59,18 @@ let currentMonth = new Date();
 
     els.logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("lexbridge-session-v1");
-      window.location.href = "/assistant";
+      localStorage.removeItem("sasf-react-session-v1");
+      localStorage.removeItem("lawyer_token");
+      localStorage.removeItem("lawyer_id");
+      localStorage.removeItem("lawyer_name");
+      window.location.href = "/login";
     });
 
     document.getElementById("prevMonthBtn").addEventListener("click", () => changeMonth(-1));
     document.getElementById("nextMonthBtn").addEventListener("click", () => changeMonth(1));
 
     document.getElementById("caseEditForm").addEventListener("submit", handleCaseUpdate);
+    if (els.docUploadForm) els.docUploadForm.addEventListener("submit", handleDocumentUpload);
 
     els.topSearchInput.addEventListener("input", (e) => {
       renderAssistantModules(e.target.value.toLowerCase());
@@ -100,8 +110,10 @@ let currentMonth = new Date();
   // 1. Initial Page: Requests
   function renderRequests(user, q) {
     const pool = appState.data.appointments.filter(a => 
-      !a.assistantId && 
-      a.type === user.department &&
+      (
+        (String(a.assistantId || "") === String(user.id) && String(a.status || "") === "Awaiting Assistant Review") ||
+        (!a.assistantId && String(a.type || "").trim().toLowerCase() === String(user.department || "").trim().toLowerCase())
+      ) &&
       (!q || (appState.data.users.find(u => u.id === a.clientId)?.name || "").toLowerCase().includes(q))
     );
 
@@ -138,7 +150,7 @@ let currentMonth = new Date();
         </td>
         <td><span class="badge badge-orange">${a.payment || "Pending"}</span></td>
         <td>
-          <button class="primary-btn-sm" onclick="takeCase('${a.id}')">Confirm & Take Case</button>
+          <button class="primary-btn-sm" onclick="takeCase('${a.id}')">Approve & Forward</button>
         </td>
       </tr>
     `).join("") : '<tr><td colspan="6" style="text-align:center; padding:20px;">No appointments currently being handled.</td></tr>';
@@ -175,24 +187,58 @@ let currentMonth = new Date();
 
   // 4. Document Controller
   function renderDocumentController(user, q) {
-    const cases = appState.data.cases.filter(c => 
+    const cases = appState.data.cases.filter(c =>
       c.assistantId === user.id &&
       (!q || c.title.toLowerCase().includes(q) || c.client.toLowerCase().includes(q))
     );
 
-    els.caseDataGrid.innerHTML = cases.length > 0 ? cases.map(c => `
-      <div class="stat-card" style="cursor:pointer;" onclick="openCaseEdit('${c.id}')">
+    const docs = Array.isArray(appState.data.documents) ? appState.data.documents : [];
+
+    if (els.docUploadCaseId) {
+      const currentSelection = els.docUploadCaseId.value;
+      const caseOptions = cases
+        .map(c => {
+          const caseId = c.caseId || c.id || "";
+          return `<option value="${caseId}">${c.title} (${caseId})</option>`;
+        })
+        .join("");
+      els.docUploadCaseId.innerHTML = `<option value="">Select case</option>${caseOptions}`;
+      if (cases.some(c => String(c.caseId || c.id || "") === String(currentSelection))) {
+        els.docUploadCaseId.value = currentSelection;
+      }
+    }
+
+    els.caseDataGrid.innerHTML = cases.length > 0 ? cases.map(c => {
+      const resolvedClientName =
+        appState.data.users.find(u => String(u.id || "") === String(c.clientId || ""))?.name ||
+        c.clientName ||
+        c.client ||
+        "Client";
+      return `
+      <div class="stat-card">
         <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:15px;">
           <div class="sidebar-brand-mark" style="width:32px; height:32px; font-size:14px;">#</div>
           <span class="badge badge-gray">${c.type}</span>
         </div>
         <h4 style="margin-bottom:5px;">${c.title}</h4>
-        <p style="font-size:12px; color:#64748b;">Client: ${c.client}</p>
+        <p style="font-size:12px; color:#64748b;">Client: ${resolvedClientName}</p>
+        <div style="margin-top:10px; display:grid; gap:6px;">
+          ${docs
+            .filter(d => String(d.caseId || "") === String(c.caseId || c.id))
+            .slice(0, 4)
+            .map(d => `
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; border:1px solid #e2e8f0; border-radius:8px; padding:6px 8px; background:#f8fafc;">
+                <span style="font-size:12px; color:#334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${d.title || d.name || "Document"}</span>
+                ${d.fileUrl ? `<a href="${d.fileUrl}" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#b45309; text-decoration:underline;">View</a>` : ""}
+              </div>
+            `).join("") || `<p style="font-size:11px; color:#94a3b8;">No uploaded documents yet.</p>`}
+        </div>
         <div style="margin-top:15px; font-size:11px; color:#94a3b8;">
-          <i class="fa-solid fa-clock-rotate-left"></i> Click to view/edit documents
+          <i class="fa-solid fa-folder-open"></i> Documents linked to this case
         </div>
       </div>
-    `).join("") : '<p style="grid-column:1/-1; text-align:center; color:#94a3b8;">No cases available to view.</p>';
+    `;
+    }).join("") : '<p style="grid-column:1/-1; text-align:center; color:#94a3b8;">No cases available to view.</p>';
   }
 
   // 5. Lawyer Schedule (Calendar)
@@ -239,12 +285,72 @@ let currentMonth = new Date();
     renderLawyerCalendar(getCurrentUser());
   }
 
+  async function uploadDocumentFile(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch("/api/upload-file", { method: "POST", body: formData });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.message || "File upload failed.");
+    }
+    return payload.fileUrl || "";
+  }
+
+  async function handleDocumentUpload(e) {
+    e.preventDefault();
+    const selectedCaseId = els.docUploadCaseId?.value || "";
+    const title = (els.docUploadTitle?.value || "").trim();
+    const fileType = els.docUploadCategory?.value || "General";
+    const selectedFile = els.docUploadFile?.files?.[0] || null;
+
+    if (!selectedCaseId || !title || !selectedFile) {
+      showToast("Case, title, and file are required.");
+      return;
+    }
+
+    const targetCase = appState.data.cases.find(
+      c => String(c.caseId || c.id || "") === String(selectedCaseId)
+    );
+    if (!targetCase) {
+      showToast("Selected case is invalid.");
+      return;
+    }
+
+    try {
+      const fileUrl = await uploadDocumentFile(selectedFile);
+      const docId = `D-${Date.now()}`;
+      appState.data.documents = Array.isArray(appState.data.documents) ? appState.data.documents : [];
+      appState.data.documents.unshift({
+        id: docId,
+        docId,
+        caseId: selectedCaseId,
+        title,
+        name: title,
+        fileType,
+        category: fileType,
+        fileUrl,
+        assistantId: getCurrentUser()?.id || "",
+        lawyerId: targetCase.lawyerId || "",
+        clientId: targetCase.clientId || "",
+        uploadDate: new Date().toISOString().slice(0, 10),
+        description: `${fileType} uploaded by assistant.`
+      });
+      await saveData();
+      els.docUploadForm.reset();
+      renderAll();
+      showToast("Document submitted successfully.");
+    } catch (error) {
+      showToast(error.message || "Unable to submit document.");
+    }
+  }
+
   // EXPOSED HELPERS
 
   window.claimRequest = async function(id) {
     const appt = appState.data.appointments.find(a => a.id === id);
     if (!appt) return;
     appt.assistantId = appState.currentUserId;
+    appt.status = "Pending";
     await saveData();
     renderAll();
     showToast("Request claimed! It is now in your handling queue.");
@@ -254,30 +360,61 @@ let currentMonth = new Date();
     const appt = appState.data.appointments.find(a => a.id === id);
     if (!appt) return;
 
-    appt.status = "Confirmed";
-    appt.payment = "Paid";
+    const assistant = getCurrentUser();
+    const lawyerId = assistant?.lawyerId || appt.lawyerId || "";
+    if (!lawyerId) {
+      showToast("No lawyer linked to your profile. Contact admin.");
+      return;
+    }
 
-    // Create Case
-    const newCaseId = `C-${Date.now()}`;
-    const client = appState.data.users.find(u => u.id === appt.clientId);
-    appState.data.cases.push({
-      id: newCaseId,
-      title: `${appt.type} Legal Matter`,
-      client: client?.name || "Client",
-      clientId: appt.clientId,
-      assistantId: appState.currentUserId,
-      lawyerId: getCurrentUser().lawyerId,
-      type: appt.type,
-      priority: "Medium",
-      status: "In Progress",
-      hearingDate: appt.date,
-      notes: "Case opened from appointment handling."
-    });
+    appt.assistantId = appState.currentUserId;
+    appt.lawyerId = lawyerId;
+    appt.assistantName = assistant?.name || "Assistant";
+    appt.status = "Proposed";
+    appt.payment = appt.payment || "Pending";
 
-    addNotification(appt.clientId, "Case Opened", `Your ${appt.type} case is now active.`);
+    // Create or update a case record so it appears in Case Controller immediately.
+    const existingCase = appState.data.cases.find(
+      (c) => String(c.sourceAppointmentId || "") === String(appt.id)
+    );
+    const client = appState.data.users.find((u) => String(u.id || "") === String(appt.clientId || ""));
+    if (existingCase) {
+      existingCase.assistantId = appState.currentUserId;
+      existingCase.lawyerId = lawyerId;
+      existingCase.clientId = appt.clientId || "";
+      existingCase.client = client?.name || existingCase.client || "Client";
+      existingCase.type = appt.type || existingCase.type || "General";
+      existingCase.caseType = appt.type || existingCase.caseType || "General";
+      existingCase.hearingDate = appt.date || existingCase.hearingDate || "";
+      existingCase.lastUpdated = new Date().toISOString();
+      existingCase.status = existingCase.status || "Pending Lawyer Review";
+    } else {
+      const newCaseId = `C-${Date.now()}`;
+      appState.data.cases.push({
+        id: newCaseId,
+        caseId: newCaseId,
+        sourceAppointmentId: appt.id,
+        title: `${appt.type || "General"} Legal Matter`,
+        client: client?.name || "Client",
+        clientName: client?.name || "Client",
+        clientId: appt.clientId || "",
+        assistantId: appState.currentUserId,
+        lawyerId: lawyerId,
+        type: appt.type || "General",
+        caseType: appt.type || "General",
+        priority: "Medium",
+        status: "Pending Lawyer Review",
+        hearingDate: appt.date || "",
+        notes: "Case opened from assistant appointment approval.",
+        lastUpdated: new Date().toISOString()
+      });
+    }
+
+    addNotification(lawyerId, "Appointment Proposed", `Assistant ${assistant?.name || "Assistant"} approved a ${appt.type} request for ${appt.date} at ${appt.time}.`);
+    addNotification(appt.clientId, "Request Approved by Assistant", `Your ${appt.type} request was approved and sent to the assigned lawyer.`);
     await saveData();
     renderAll();
-    showToast("Case taken! View it in the Case Controller.");
+    showToast("Approved, forwarded to lawyer, and moved into Case Controller.");
   };
 
   window.updateCaseStatus = async function(id, status) {

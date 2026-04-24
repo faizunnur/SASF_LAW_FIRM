@@ -23,23 +23,23 @@
       </div>
       <nav class="sidebar-nav">
         <a class="nav-item active" data-panel="requests">
-          <i class="fa-solid fa-inbox nav-icon"></i>
+          <i class="fa-solid fa-briefcase nav-icon"></i>
           <span>Incoming Requests</span>
         </a>
         <a class="nav-item" data-panel="appointments">
-          <i class="fa-solid fa-calendar-check nav-icon"></i>
+          <i class="fa-solid fa-clipboard-check nav-icon"></i>
           <span>Appt. Handling</span>
         </a>
         <a class="nav-item" data-panel="cases">
-          <i class="fa-solid fa-briefcase nav-icon"></i>
+          <i class="fa-solid fa-scale-balanced nav-icon"></i>
           <span>Case Controller</span>
         </a>
         <a class="nav-item" data-panel="documents">
-          <i class="fa-solid fa-folder-open nav-icon"></i>
+          <i class="fa-solid fa-file-lines nav-icon"></i>
           <span>Doc Controller</span>
         </a>
         <a class="nav-item" data-panel="schedule">
-          <i class="fa-solid fa-calendar-day nav-icon"></i>
+          <i class="fa-solid fa-calendar-days nav-icon"></i>
           <span>Lawyer Schedule</span>
         </a>
       </nav>
@@ -148,6 +148,33 @@
         <div class="panel-heading">
           <h2>Case Data Repository</h2>
         </div>
+        <form id="docUploadForm" class="grid-form" style="margin-bottom:14px;">
+          <div class="form-group">
+            <label for="docUploadCaseId">Case</label>
+            <select id="docUploadCaseId" required>
+              <option value="">Select case</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="docUploadTitle">Document Title</label>
+            <input id="docUploadTitle" type="text" placeholder="e.g. Affidavit Draft" required>
+          </div>
+          <div class="form-group">
+            <label for="docUploadCategory">Type</label>
+            <select id="docUploadCategory">
+              <option value="Evidence">Evidence</option>
+              <option value="Identity">Identity</option>
+              <option value="Contract">Contract</option>
+              <option value="Notice">Notice</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="docUploadFile">File</label>
+            <input id="docUploadFile" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.ppt,.pptx" required>
+          </div>
+          <button type="submit" class="submit-btn" style="background:#f59e0b;">Submit Document</button>
+        </form>
         <div class="case-grid" id="caseDataGrid">
           <!-- Rendered as cards for each case -->
         </div>
@@ -218,7 +245,7 @@
 
   <div id="toast" class="toast"></div>
 
-  <script src="/script.js"></script>
+  <script src="/assistant/assistant-core.js"></script>
   <script src="assistant.js"></script>
 </body>
 

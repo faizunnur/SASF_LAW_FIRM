@@ -22,10 +22,10 @@
   <div id="app">
     <section id="loginView" class="view">
       <div class="auth-card">
-        <div class="brand-row" style="flex-direction: column; text-align: center; gap: 10px;">
-          <img src="/uploads/logo.png" alt="SASF Logo" style="width: 80px; margin: 0 auto;">
-          <h1 style="font-size: 24px; font-weight: 800; margin: 0;">SASF LAW FIRM</h1>
-          <p style="color: #64748b; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Your Legal Partner</p>
+        <div class="brand-auth">
+          <img src="/uploads/logo.png" alt="SASF Logo" />
+          <h1>SASF LAW FIRM</h1>
+          <p>Your Legal Partner</p>
         </div>
         <p class="muted">Professional access for firm solicitors and legal counsel.</p>
 
@@ -54,11 +54,11 @@
           <button id="sidebarToggle" class="icon-btn" aria-label="Toggle Sidebar">
             <i class="fa-solid fa-bars"></i>
           </button>
-          <div style="display: flex; align-items: center; gap: 12px; margin-left: 10px;">
-            <img src="/uploads/logo.png" alt="Logo" style="width: 32px; height: 32px; border-radius: 4px;">
-            <div style="display: flex; flex-direction: column;">
-              <span style="font-weight: 800; font-size: 14px; line-height: 1;">SASF LAW FIRM</span>
-              <span style="font-size: 10px; color: #64748b; font-weight: 600;">Your Legal Partner</span>
+          <div class="brand-topbar">
+            <img src="/uploads/logo.png" alt="Logo" />
+            <div>
+              <span>SASF LAW FIRM</span>
+              <small>Your Legal Partner</small>
             </div>
           </div>
         </div>
@@ -160,7 +160,7 @@
             <div class="card">
               <div class="card-head">
                 <h2>Case Control Panel</h2>
-                <button id="toggleCaseFormBtn" class="btn">
+                <button id="toggleCaseFormBtn" class="btn btn-hidden-ui">
                   <i class="fa-solid fa-plus"></i>
                   Create Case
                 </button>
@@ -306,6 +306,20 @@
                 <div class="field">
                   <label for="docCaseSelect">Case</label>
                   <select id="docCaseSelect" required></select>
+                </div>
+                <div class="field">
+                  <label for="docCategory">Category</label>
+                  <select id="docCategory" required>
+                    <option value="Evidence">Evidence</option>
+                    <option value="Identity">Identity</option>
+                    <option value="Contract">Contract</option>
+                    <option value="Notice">Notice</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div class="field full">
+                  <label for="docFileInput">File</label>
+                  <input id="docFileInput" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.ppt,.pptx" required />
                 </div>
                 <div class="field full">
                   <label for="docDescription">Description</label>
@@ -508,6 +522,29 @@
       <div class="modal-head">
         <h3>View / Edit Document</h3>
         <button class="icon-btn" data-close="documentModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div id="documentPreviewBox" class="detail-body doc-preview">
+        <div class="preview-item">
+          <small>Document ID</small>
+          <strong id="editDocMetaId">-</strong>
+        </div>
+        <div class="preview-item">
+          <small>Uploaded On</small>
+          <strong id="editDocMetaDate">-</strong>
+        </div>
+        <div class="preview-item">
+          <small>File Type</small>
+          <strong id="editDocMetaType">-</strong>
+        </div>
+        <div class="preview-item">
+          <small>Case</small>
+          <strong id="editDocMetaCase">-</strong>
+        </div>
+        <div class="preview-actions">
+          <a id="editDocOpenFile" class="btn btn-secondary hidden" href="#" target="_blank" rel="noopener noreferrer">Open Attached File</a>
+          <p id="editDocPreviewNote" class="preview-note"></p>
+        </div>
       </div>
 
       <form id="documentEditForm" class="grid-form">

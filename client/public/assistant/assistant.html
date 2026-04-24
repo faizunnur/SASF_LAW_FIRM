@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistant Command Center | SASF LAW FIRM</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="assistant.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body>
+  <div class="assistant-shell">
+    <!-- Sidebar -->
+    <aside class="assistant-sidebar">
+      <div class="sidebar-header" style="flex-direction: column; align-items: flex-start; padding: 30px 20px;">
+        <img src="/uploads/logo.png" alt="SASF Logo" style="width: 60px; margin-bottom: 15px; border-radius: 8px;">
+        <div class="brand-text">
+          <h1 style="font-size: 18px; font-weight: 800; color: #1e293b; margin: 0;">SASF LAW FIRM</h1>
+          <p style="font-size: 11px; color: #64748b; margin: 0; font-weight: 500;">Your Legal Partner</p>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-panel="requests">
+          <i class="fa-solid fa-briefcase nav-icon"></i>
+          <span>Incoming Requests</span>
+        </a>
+        <a class="nav-item" data-panel="appointments">
+          <i class="fa-solid fa-clipboard-check nav-icon"></i>
+          <span>Appt. Handling</span>
+        </a>
+        <a class="nav-item" data-panel="cases">
+          <i class="fa-solid fa-scale-balanced nav-icon"></i>
+          <span>Case Controller</span>
+        </a>
+        <a class="nav-item" data-panel="documents">
+          <i class="fa-solid fa-file-lines nav-icon"></i>
+          <span>Doc Controller</span>
+        </a>
+        <a class="nav-item" data-panel="schedule">
+          <i class="fa-solid fa-calendar-days nav-icon"></i>
+          <span>Lawyer Schedule</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer" style="padding: 20px;">
+        <button id="logoutBtn" class="primary-btn-sm" style="width: 100%; background: #ef4444;">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="assistant-main">
+      <header class="dashboard-header">
+        <div class="header-title">
+          <h1 id="panelTitle">Incoming Requests</h1>
+          <p id="panelSubtitle">Intake pool for new client bookings.</p>
+        </div>
+        <div class="header-actions">
+          <div class="search-bar">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="topSearchInput" placeholder="Search cases, clients...">
+          </div>
+          <div class="user-profile">
+            <span id="userNameChip">Assistant Name</span>
+            <div class="category-badge" id="userCategoryBadge">Criminal Law</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- PANELS -->
+
+      <!-- Panel 1: Incoming Requests -->
+      <section id="panel-requests" class="panel active">
+        <div class="panel-heading">
+          <h2>Specialty Intake Pool</h2>
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Client</th>
+                <th>Type</th>
+                <th>Time</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="unassignedTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Panel 2: Appointment Handling -->
+      <section id="panel-appointments" class="panel hidden">
+        <div class="panel-heading">
+          <h2>Active Appointment Queue</h2>
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Schedule</th>
+                <th>Client</th>
+                <th>Type</th>
+                <th>Communication</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="activeApptsTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Panel 3: Case Controller -->
+      <section id="panel-cases" class="panel hidden">
+        <div class="panel-heading">
+          <h2>Live Case Control</h2>
+        </div>
+        <div class="data-table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Case ID</th>
+                <th>Title</th>
+                <th>Client</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Last Update</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="casesTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Panel 4: Document Controller -->
+      <section id="panel-documents" class="panel hidden">
+        <div class="panel-heading">
+          <h2>Case Data Repository</h2>
+        </div>
+        <form id="docUploadForm" class="grid-form" style="margin-bottom:14px;">
+          <div class="form-group">
+            <label for="docUploadCaseId">Case</label>
+            <select id="docUploadCaseId" required>
+              <option value="">Select case</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="docUploadTitle">Document Title</label>
+            <input id="docUploadTitle" type="text" placeholder="e.g. Affidavit Draft" required>
+          </div>
+          <div class="form-group">
+            <label for="docUploadCategory">Type</label>
+            <select id="docUploadCategory">
+              <option value="Evidence">Evidence</option>
+              <option value="Identity">Identity</option>
+              <option value="Contract">Contract</option>
+              <option value="Notice">Notice</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="docUploadFile">File</label>
+            <input id="docUploadFile" type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.ppt,.pptx" required>
+          </div>
+          <button type="submit" class="submit-btn" style="background:#f59e0b;">Submit Document</button>
+        </form>
+        <div class="case-grid" id="caseDataGrid">
+          <!-- Rendered as cards for each case -->
+        </div>
+      </section>
+
+      <!-- Panel 5: Lawyer Schedule -->
+      <section id="panel-schedule" class="panel hidden">
+        <div class="panel-heading">
+          <h2 id="lawyerNameLabel">Lawyer's Master Calendar</h2>
+        </div>
+        <div class="calendar-wrapper">
+          <div class="calendar-header">
+            <button id="prevMonthBtn"><i class="fa-solid fa-chevron-left"></i></button>
+            <h3 id="calendarMonthLabel">April 2026</h3>
+            <button id="nextMonthBtn"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <div class="calendar-grid-header">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div id="calendarGrid" class="calendar-grid">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+        <div class="calendar-legend" style="margin-top: 20px;">
+          <span style="display:inline-flex; align-items:center; gap:8px; font-size:12px;">
+            <div style="width:12px; height:12px; background:#ef4444; border-radius:3px;"></div> Lawyer Busy (Date Marked Red)
+          </span>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Modal: Case Detail/Edit -->
+  <div id="caseDetailModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalCaseTitle">Edit Case Details</h2>
+        <button class="close-modal" onclick="closeModal('caseDetailModal')">&times;</button>
+      </div>
+      <form id="caseEditForm" class="grid-form">
+        <input type="hidden" name="id" id="editCaseId">
+        <div class="form-group">
+          <label>Case Title</label>
+          <input type="text" name="title" id="editTitle" required>
+        </div>
+        <div class="form-group">
+          <label>Case Type</label>
+          <input type="text" name="type" id="editType" readonly>
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select name="priority" id="editPriority">
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Summary/Notes</label>
+          <textarea name="notes" id="editNotes" rows="4"></textarea>
+        </div>
+        <button type="submit" class="submit-btn" style="background: #f59e0b;">Update Case Data</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/assistant/assistant-core.js"></script>
+  <script src="assistant.js"></script>
+</body>
+
+</html>

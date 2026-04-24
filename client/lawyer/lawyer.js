@@ -1,6 +1,8 @@
 const API_BASE = window.location.origin;
 const DEMO_MODE_FALLBACK = true;
 const LEGACY_DATA_KEY = "lexbridge-data-v1";
+const REACT_SESSION_KEY = "sasf-react-session-v1";
+const REACT_ID_KEY = "lexbridge-session-v1";
 
 const STORAGE_KEYS = {
   token: "lawyer_token",
@@ -245,6 +247,8 @@ function cacheElements() {
   ui.documentCreateForm = document.getElementById("documentCreateForm");
   ui.docTitle = document.getElementById("docTitle");
   ui.docCaseSelect = document.getElementById("docCaseSelect");
+  ui.docCategory = document.getElementById("docCategory");
+  ui.docFileInput = document.getElementById("docFileInput");
   ui.docDescription = document.getElementById("docDescription");
   ui.docSearchInput = document.getElementById("docSearchInput");
   ui.docFromDate = document.getElementById("docFromDate");
@@ -257,6 +261,13 @@ function cacheElements() {
   ui.editDocTitle = document.getElementById("editDocTitle");
   ui.editDocCaseSelect = document.getElementById("editDocCaseSelect");
   ui.editDocDescription = document.getElementById("editDocDescription");
+  ui.documentPreviewBox = document.getElementById("documentPreviewBox");
+  ui.editDocMetaId = document.getElementById("editDocMetaId");
+  ui.editDocMetaDate = document.getElementById("editDocMetaDate");
+  ui.editDocMetaType = document.getElementById("editDocMetaType");
+  ui.editDocMetaCase = document.getElementById("editDocMetaCase");
+  ui.editDocOpenFile = document.getElementById("editDocOpenFile");
+  ui.editDocPreviewNote = document.getElementById("editDocPreviewNote");
 
   ui.eventCreateForm = document.getElementById("eventCreateForm");
   ui.eventTitle = document.getElementById("eventTitle");
@@ -281,7 +292,7 @@ function cacheElements() {
 }
 
 function bindEvents() {
-  ui.loginForm.addEventListener("submit", handleLogin);
+  if (ui.loginForm) ui.loginForm.addEventListener("submit", handleLogin);
   ui.logoutBtn.addEventListener("click", logout);
 
   ui.sidebarToggle.addEventListener("click", () => {
@@ -411,6 +422,26 @@ function bindEvents() {
 }
 
 function restoreSession() {
+  // Prefer the main React session so this page does not show a separate login.
+  let reactSession = null;
+  try {
+    const raw = localStorage.getItem(REACT_SESSION_KEY);
+    reactSession = raw ? JSON.parse(raw) : null;
+  } catch (_error) {
+    reactSession = null;
+  }
+
+  if (reactSession && String(reactSession.role || "").toLowerCase() === "lawyer" && reactSession.userId) {
+    state.token = localStorage.getItem(STORAGE_KEYS.token) || null;
+    state.lawyerId = String(reactSession.userId);
+    state.lawyerName = reactSession.name || "Lawyer";
+    localStorage.setItem(STORAGE_KEYS.lawyerId, state.lawyerId);
+    localStorage.setItem(STORAGE_KEYS.lawyerName, state.lawyerName);
+    enterDashboard();
+    loadDashboardData();
+    return;
+  }
+
   const token = localStorage.getItem(STORAGE_KEYS.token);
   const lawyerId = localStorage.getItem(STORAGE_KEYS.lawyerId);
   const lawyerName = localStorage.getItem(STORAGE_KEYS.lawyerName);
@@ -469,14 +500,16 @@ function enterDashboard() {
 }
 
 function showLogin() {
-  ui.dashboardView.classList.add("hidden");
-  ui.loginView.classList.remove("hidden");
+  // Single auth flow: lawyer page should use app login screen.
+  window.location.href = "/login";
 }
 
 function logout() {
   localStorage.removeItem(STORAGE_KEYS.token);
   localStorage.removeItem(STORAGE_KEYS.lawyerId);
   localStorage.removeItem(STORAGE_KEYS.lawyerName);
+  localStorage.removeItem(REACT_SESSION_KEY);
+  localStorage.removeItem(REACT_ID_KEY);
 
   state.token = null;
   state.lawyerId = null;
@@ -490,9 +523,8 @@ function logout() {
   state.selectedDocId = null;
   state.selectedEventId = null;
 
-  ui.loginForm.reset();
-  showLogin();
-  showFlash("Logged out successfully.", "info");
+  if (ui.loginForm) ui.loginForm.reset();
+  window.location.href = "/login";
 }
 
 async function loadDashboardData() {
@@ -557,7 +589,21 @@ async function loadNotifications() {
 
 async function loadAppointments() {
   const data = await apiRequest(`/api/appointments?lawyerId=${encodeURIComponent(state.lawyerId)}`);
-  state.appointments = Array.isArray(data) ? data : [];
+  const legacyUsers = Array.isArray(getLegacyData()?.users) ? getLegacyData().users : [];
+  state.appointments = Array.isArray(data)
+    ? data.map((a) => {
+        const clientId = String(a.clientId || a.client_id || "");
+        const clientFromLegacy = legacyUsers.find((u) => String(u.id || "") === clientId);
+        return {
+          ...a,
+          id: a.id || a.appointmentId || "",
+          type: a.type || a.caseType || "General",
+          date: a.date || a.apptDate || "",
+          time: a.time || a.apptTime || "",
+          clientName: a.clientName || a.client || clientFromLegacy?.name || "Client"
+        };
+      })
+    : [];
 }
 
 function renderProposedAppointments() {
@@ -590,38 +636,72 @@ async function acceptAppointment(id) {
     appt.status = "Confirmed";
     appt.payment = "Paid";
 
-    // 2. Create the actual Case object
-    const newCase = {
-      caseId: `C-${Date.now()}`,
-      lawyerId: state.lawyerId,
-      assistantId: appt.assistantId,
-      title: `${appt.type} Matter - ${appt.clientName || 'Client'}`,
-      clientName: appt.clientName || 'Client',
-      clientId: appt.clientId,
-      status: "In Progress",
-      priority: "Medium",
-      caseType: appt.type,
-      lastUpdated: new Date().toISOString(),
-      description: `Case opened from confirmed ${appt.type} consultation proposal.`
-    };
-
     // Save to global data (via api)
     const fullDataRes = await fetch("/api/load");
     const fullData = await fullDataRes.json();
+    fullData.users = Array.isArray(fullData.users) ? fullData.users : [];
+    fullData.cases = Array.isArray(fullData.cases) ? fullData.cases : [];
+    fullData.appointments = Array.isArray(fullData.appointments) ? fullData.appointments : [];
+    fullData.notifications = Array.isArray(fullData.notifications) ? fullData.notifications : [];
+    const clientFromUsers = fullData.users.find((u) => String(u.id || "") === String(appt.clientId || ""));
+    const resolvedClientName = appt.clientName || clientFromUsers?.name || "Client";
     
     // Update appointment in full data
     const fullAppt = fullData.appointments.find(a => a.id === id);
     if (fullAppt) {
       fullAppt.status = "Confirmed";
       fullAppt.payment = "Paid";
+      if (!fullAppt.clientName && resolvedClientName) fullAppt.clientName = resolvedClientName;
     }
     
-    // Add new case
-    fullData.cases.push(newCase);
+    // Create once or update existing case linked to this appointment.
+    const existingIdx = fullData.cases.findIndex(
+      (c) =>
+        String(c.sourceAppointmentId || "") === String(id) ||
+        (String(c.clientId || "") === String(appt.clientId || "") &&
+          String(c.caseType || c.type || "") === String(appt.type || "") &&
+          String(c.assistantId || "") === String(appt.assistantId || "") &&
+          String(c.lawyerId || "") === String(state.lawyerId || ""))
+    );
+    if (existingIdx >= 0) {
+      fullData.cases[existingIdx] = {
+        ...fullData.cases[existingIdx],
+        sourceAppointmentId: id,
+        lawyerId: state.lawyerId,
+        assistantId: appt.assistantId || fullData.cases[existingIdx].assistantId || "",
+        title: fullData.cases[existingIdx].title || `${appt.type} Matter - ${resolvedClientName}`,
+        clientName: resolvedClientName,
+        client: resolvedClientName,
+        clientId: appt.clientId || fullData.cases[existingIdx].clientId || "",
+        status: "In Progress",
+        priority: fullData.cases[existingIdx].priority || "Medium",
+        caseType: fullData.cases[existingIdx].caseType || appt.type || "General",
+        type: fullData.cases[existingIdx].type || appt.type || "General",
+        lastUpdated: new Date().toISOString(),
+        description: fullData.cases[existingIdx].description || `Case opened from confirmed ${appt.type} consultation proposal.`
+      };
+    } else {
+      fullData.cases.push({
+        caseId: `C-${Date.now()}`,
+        sourceAppointmentId: id,
+        lawyerId: state.lawyerId,
+        assistantId: appt.assistantId,
+        title: `${appt.type} Matter - ${resolvedClientName}`,
+        clientName: resolvedClientName,
+        client: resolvedClientName,
+        clientId: appt.clientId,
+        status: "In Progress",
+        priority: "Medium",
+        caseType: appt.type,
+        type: appt.type,
+        lastUpdated: new Date().toISOString(),
+        description: `Case opened from confirmed ${appt.type} consultation proposal.`
+      });
+    }
     
     // Add notification to client
     fullData.notifications.unshift({
-      id: `N-${Date.now()}`,
+      id: `N-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       userId: appt.clientId,
       title: "Case Accepted",
       message: `Your ${appt.type} case has been accepted and assigned to Lawyer ${state.lawyerName}.`,
@@ -766,12 +846,20 @@ async function deleteProfile() {
 function normalizeCase(c) {
   const caseId = c.caseId || c.id || c.caseID || "";
   const lastUpdated = c.lastUpdated || c.updatedOn || c.uploadDate || c.date || "";
+  const legacyUsers = Array.isArray(getLegacyData()?.users) ? getLegacyData().users : [];
+  const clientId = String(c.clientId || c.client_id || "");
+  const clientFromLegacy = legacyUsers.find((u) => String(u.id || "") === clientId);
+  const rawClientName = c.clientName || c.client || "";
+  const resolvedClientName =
+    rawClientName && String(rawClientName).trim().toLowerCase() !== "client"
+      ? rawClientName
+      : clientFromLegacy?.name || "Unknown Client";
   return {
     ...c,
     caseId,
     lastUpdated,
     title: c.title || "Untitled Case",
-    clientName: c.clientName || c.client || "Unknown Client",
+    clientName: resolvedClientName,
     status: c.status || "Open",
     priority: c.priority || "Medium",
     caseType: c.caseType || c.type || "General",
@@ -780,9 +868,11 @@ function normalizeCase(c) {
 }
 
 function normalizeDocument(doc) {
+  const fileUrl = String(doc.fileUrl || doc.url || doc.fileURL || "").trim();
   return {
     ...doc,
-    fileType: doc.fileType || "FILE"
+    fileUrl,
+    fileType: doc.fileType || doc.category || "FILE"
   };
 }
 
@@ -1120,24 +1210,32 @@ function renderDocuments() {
 
 async function createDocument(e) {
   e.preventDefault();
+  const selectedFile = ui.docFileInput?.files?.[0] || null;
 
   const payload = {
     title: ui.docTitle.value.trim(),
     caseId: ui.docCaseSelect.value,
+    category: ui.docCategory?.value || "Other",
     description: ui.docDescription.value.trim(),
     lawyerId: state.lawyerId
   };
 
-  if (!payload.title || !payload.caseId || !payload.description) {
-    showFlash("Please complete all document fields.", "warning");
+  if (!payload.title || !payload.caseId || !payload.description || !selectedFile) {
+    showFlash("Please complete all document fields and attach a file.", "warning");
     return;
   }
 
   try {
+    const upload = await withLoading(() => uploadDocumentFile(selectedFile));
+    const fileType = (selectedFile.name.split(".").pop() || "FILE").toUpperCase();
     const result = await withLoading(() =>
       apiRequest("/api/documents", {
         method: "POST",
-        body: payload
+        body: {
+          ...payload,
+          fileType,
+          fileUrl: upload.fileUrl || ""
+        }
       })
     );
 
@@ -1148,7 +1246,9 @@ async function createDocument(e) {
       description: payload.description,
       lawyerId: state.lawyerId,
       uploadDate: toISODate(new Date()),
-      fileType: "PDF"
+      category: payload.category,
+      fileType,
+      fileUrl: upload.fileUrl || ""
     };
 
     state.documents.unshift(newDoc);
@@ -1162,15 +1262,63 @@ async function createDocument(e) {
   }
 }
 
+async function uploadDocumentFile(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch(`${API_BASE}/api/upload-file`, {
+      method: "POST",
+      body: formData
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.message || "Document upload failed.");
+    }
+    return {
+      fileUrl: payload.fileUrl || "",
+      originalName: payload.originalName || file.name
+    };
+  } catch (error) {
+    if (!DEMO_MODE_FALLBACK) throw error;
+    enableDemoMode();
+    return {
+      fileUrl: URL.createObjectURL(file),
+      originalName: file.name
+    };
+  }
+}
+
 function openDocumentModal(docId) {
   const doc = state.documents.find((d) => String(d.docId) === String(docId));
   if (!doc) return;
 
   state.selectedDocId = doc.docId;
+  const linkedCase = state.cases.find((c) => String(c.caseId || c.id || "") === String(doc.caseId || ""));
+  const caseLabel = linkedCase ? `${linkedCase.caseId || "-"} - ${linkedCase.title || "Untitled Case"}` : doc.caseId || "-";
+
   ui.editDocId.value = doc.docId;
   ui.editDocTitle.value = doc.title || "";
   ui.editDocCaseSelect.value = doc.caseId || "";
   ui.editDocDescription.value = doc.description || "";
+  if (ui.editDocMetaId) ui.editDocMetaId.textContent = doc.docId || "-";
+  if (ui.editDocMetaDate) ui.editDocMetaDate.textContent = doc.uploadDate ? formatDate(doc.uploadDate) : "-";
+  if (ui.editDocMetaType) ui.editDocMetaType.textContent = doc.fileType || "FILE";
+  if (ui.editDocMetaCase) ui.editDocMetaCase.textContent = caseLabel;
+  if (ui.editDocOpenFile) {
+    if (doc.fileUrl) {
+      ui.editDocOpenFile.href = doc.fileUrl;
+      ui.editDocOpenFile.classList.remove("hidden");
+    } else {
+      ui.editDocOpenFile.removeAttribute("href");
+      ui.editDocOpenFile.classList.add("hidden");
+    }
+  }
+  if (ui.editDocPreviewNote) {
+    ui.editDocPreviewNote.textContent = doc.fileUrl
+      ? "File preview opens in a new tab."
+      : "No file URL is linked for this document yet.";
+  }
 
   openModal("documentModal");
 }
@@ -1723,7 +1871,9 @@ function mockApi(path, options = {}) {
               description: body.description,
               lawyerId: body.lawyerId,
               uploadDate: toISODate(new Date()),
-              fileType: "PDF"
+              category: body.category || "Other",
+              fileType: body.fileType || "FILE",
+              fileUrl: String(body.fileUrl || "").trim()
             };
             mockDb.documents.push(newDoc);
             pushMockNotification(body.lawyerId, `New document ${docId} added to case ${body.caseId}.`);
@@ -1935,7 +2085,8 @@ function ensureLegacyLawyerHydrated(lawyerId) {
           caseId: String(d.caseId || "N/A"),
           uploadDate: normalizeDate(d.uploadDate || d.updatedOn || toISODate(new Date())),
           fileType: d.fileType || d.category || "FILE",
-          description: d.description || "No description provided."
+          description: d.description || "No description provided.",
+          fileUrl: String(d.fileUrl || d.url || d.fileURL || "").trim()
         });
       });
   }

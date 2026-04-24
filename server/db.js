@@ -44,6 +44,8 @@ async function setupDatabase() {
         password    TEXT NOT NULL DEFAULT '',
         role        TEXT NOT NULL DEFAULT 'client',
         phone       TEXT NOT NULL DEFAULT '',
+        bar_id      TEXT NOT NULL DEFAULT '',
+        specialization TEXT NOT NULL DEFAULT '',
         department  TEXT NOT NULL DEFAULT '',
         level       TEXT NOT NULL DEFAULT '',
         image_url   TEXT NOT NULL DEFAULT '',
@@ -155,6 +157,19 @@ async function setupDatabase() {
     await sql`INSERT INTO schema_version VALUES (3) ON CONFLICT (version) DO NOTHING`;
     console.log("Migration to v3 complete: added file_url to documents.");
   }
+
+  if (currentVersion < 4) {
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS bar_id TEXT NOT NULL DEFAULT ''`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS specialization TEXT NOT NULL DEFAULT ''`;
+    await sql`
+      UPDATE users
+      SET specialization = COALESCE(NULLIF(specialization, ''), department, '')
+      WHERE COALESCE(specialization, '') = ''
+    `;
+    await sql`INSERT INTO schema_version VALUES (4) ON CONFLICT (version) DO NOTHING`;
+    console.log("Migration to v4 complete: added bar_id and specialization to users.");
+  }
+
 }
 
 module.exports = { checkDatabase, getSqlClient, setupDatabase };

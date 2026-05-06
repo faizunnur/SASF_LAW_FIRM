@@ -1,0 +1,2 @@
+[deploy]
+buildCommand = "npm run build"
